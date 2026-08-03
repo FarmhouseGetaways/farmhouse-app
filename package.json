@@ -1,0 +1,14 @@
+{
+  "name": "farmhouse-app",
+  "private": true,
+  "type": "module",
+  "description": "One installable app over Farmhouse Getaways, Mini Barn Market and Farmstand.TV.",
+  "scripts": {
+    "build": "python3 tools/build.py",
+    "vapid": "web-push generate-vapid-keys"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "web-push": "^3.6.7"
+  }
+}

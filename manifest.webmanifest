@@ -1,0 +1,44 @@
+{
+  "name": "Farmhouse Getaways",
+  "short_name": "Farmhouse",
+  "description": "Ramona, California \u2014 a working ranch and a mountain retreat, the 24/7 farm stand at the back gate, and the map to every farm stand on the drive.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12100E",
+  "theme_color": "#12100E",
+  "categories": [
+    "travel",
+    "food",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "The map",
+      "url": "/map"
+    },
+    {
+      "name": "Book a stay",
+      "url": "/stay"
+    }
+  ]
+}
