@@ -72,22 +72,57 @@ const UA =
    what the page does anyway.
 --------------------------------------------------------------------------- */
 function stillFrom(html) {
-  var m =
-    // Checked against the live embed page for reel/DbJutd0BsoV on 3 Aug 2026:
-    // it is the EmbeddedMediaImage shape that actually matches today. The
-    // other three are kept because Instagram has changed this markup before
-    // and the cost of carrying them is nothing.
-    html.match(/class="EmbeddedMediaImage"[^>]*\ssrc="([^"]+)"/) ||
-    html.match(/"display_url"\s*:\s*"([^"]+)"/) ||
-    html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/) ||
-    // Last resort: any Facebook CDN photo URL in the page. Cruder, but it
-    // survives a markup change that breaks all three of the above.
-    html.match(/(https:[^"'\s\\]*fbcdn\.net\/v\/t51[^"'\s\\]*)/);
-  if (!m) return "";
-  return m[1]
-    .replace(/\\u0026/g, "&")
-    .replace(/\\\//g, "/")
-    .replace(/&amp;/g, "&");
+  /* The first version of this looked for
+         class="EmbeddedMediaImage" ... src="..."
+     which is exactly what the page looks like in a browser — and that was the
+     mistake. What I read to write it was the DOM *after* Instagram's own
+     JavaScript had run. A server gets the raw HTML, where the same picture is
+     a JSON-escaped URL buried in a script tag, attribute order is not
+     guaranteed, and every slash is written \/.
+     Six fetches came back 200, 605KB, no login wall, and matched nothing.
+
+     So this now works the other way round: find any Facebook CDN photo URL in
+     the response, in whatever form, and unescape it. Blunt, but it cannot be
+     broken by an attribute reordering or a renamed JSON key. */
+  const unescape = (u) =>
+    u.replace(/\\u0026/g, "&")
+     .replace(/\\\//g, "/")
+     .replace(/&amp;/g, "&");
+
+  // Ordered by how much we trust them, not by how they are written.
+  const probes = [
+    /"display_url"\s*:\s*"([^"]+)"/,
+    /class="EmbeddedMediaImage"[^>]*\ssrc="([^"]+)"/,
+    /<img[^>]+src="([^"]+)"[^>]*class="EmbeddedMediaImage"/,
+    /<meta[^>]+property="og:image"[^>]+content="([^"]+)"/,
+    // Last resort, and the one most likely to survive a redesign: any fbcdn
+    // photo URL at all, backslashes allowed because JSON escapes them.
+    /(https:(?:\\?\/){2}[^"'\s]*?fbcdn\.net(?:\\?\/)v(?:\\?\/)t51[^"'\s]*?\.(?:jpg|jpeg|webp)[^"'\s]*)/,
+  ];
+  for (const re of probes) {
+    const m = html.match(re);
+    if (m && m[1]) {
+      const u = unescape(m[1]);
+      if (/^https:\/\//.test(u)) return u;
+    }
+  }
+  return "";
+}
+
+/* Turned on with ?peek=<index>. Returns what the fetched page actually looks
+   like around anything image-shaped, so the next guess is not a guess. It
+   returns no personal data — only markup Instagram serves to anyone. */
+function peekAt(html) {
+  const marks = ["display_url", "EmbeddedMediaImage", "og:image", "fbcdn.net",
+                 "image_versions", "thumbnail_src", "\"src\""];
+  const out = {};
+  for (const m of marks) {
+    const i = html.indexOf(m);
+    out[m] = i < 0 ? null : { at: i, around: html.slice(Math.max(0, i - 90), i + 260) };
+  }
+  out._bytes = html.length;
+  out._head = html.slice(0, 200);
+  return out;
 }
 
 async function pinnedWithStills(trace) {
@@ -170,7 +205,25 @@ const CACHE = {
   "Netlify-CDN-Cache-Control": "public, max-age=1800, stale-while-revalidate=86400",
 };
 
-export default async () => {
+export default async (req) => {
+  // Diagnostic. ?peek=0..5 dumps what Instagram actually returned for that
+  // pinned post, so a broken extractor can be fixed in one round instead of
+  // three. Harmless to leave in — it exposes nothing that is not public.
+  try {
+    const peek = new URL(req.url).searchParams.get("peek");
+    if (peek !== null) {
+      const i = Math.max(0, Math.min(PINNED.length - 1, parseInt(peek, 10) || 0));
+      const res = await fetch(`https://www.instagram.com/${PINNED[i][0]}/embed/captioned/`, {
+        headers: { "user-agent": UA, "accept-language": "en-US,en;q=0.9" },
+      });
+      const html = await res.text();
+      return Response.json(
+        { post: PINNED[i][0], status: res.status, found: stillFrom(html), peek: peekAt(html) },
+        { headers: { "Cache-Control": "no-store" } }
+      );
+    }
+  } catch (err) { /* fall through to the normal path */ }
+
   const token = await currentToken();
 
   /* Every no-token and every failure path comes through here, and every one
