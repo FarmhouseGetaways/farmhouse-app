@@ -194,6 +194,12 @@ p.lede { font-size: 1.04rem; line-height: 1.6; color: #CFC7BA; }
   font-size: .72rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;
   padding: .95rem 1.4rem; border-radius: 999px; border: 1.5px solid transparent;
   cursor: pointer; text-align: center;
+  /* A <button> carries the browser's own light "buttonface" background unless
+     told otherwise. .btn-go sets one; .btn-line does not — so on every public
+     page, where .btn-line is always an <a>, it looked fine, and the first time
+     it was used on a real <button> (Dismiss, in the admin inbox) the cream
+     text landed on a near-white fill and disappeared. */
+  background: none;
 }
 .btn-go { background: var(--accent); color: var(--night); }
 .btn-line { border-color: var(--line); color: var(--cream); }
@@ -244,7 +250,12 @@ p.lede { font-size: 1.04rem; line-height: 1.6; color: #CFC7BA; }
   background: #E8E4D6; border: 1px solid var(--line); border-radius: var(--radius);
   z-index: 1;
 }
-.fsfail { color: var(--mute); text-align: center; padding: 3rem 1.2rem; font-size: .93rem; }
+/* This message only ever appears inside #fsmap, whose background is the light
+   map placeholder — not the dark page. In --mute it landed at 1.8:1, which
+   means the one sentence explaining why the map is missing was itself
+   invisible. Dark ink, because the surface under it is light. */
+.fsfail { color: #3B3630; text-align: center; padding: 3rem 1.2rem; font-size: .93rem; }
+.fsfail a { color: #14501B; text-decoration: underline; }
 .leaflet-container { font-family: var(--body); background: #E8E4D6; }
 .leaflet-control-attribution { background: rgba(255,255,255,.88) !important; color: #5C6156 !important; font-size: .6rem; }
 .leaflet-control-attribution a { color: #1B6E24 !important; }

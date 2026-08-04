@@ -28,7 +28,7 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from admin import ADMIN_BODY, ADMIN_JS
+from admin import ADMIN_BODY, ADMIN_CSS, ADMIN_JS
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -792,7 +792,7 @@ def page_admin():
     No tab bar. It is a tool, not a section of the app, and a tab pointing at a
     password screen would be a permanent piece of furniture for visitors.
     """
-    html = (head("Admin", "/admin", "var(--fstv)")
+    html = (head("Admin", "/admin", "var(--fstv)", ADMIN_CSS)
             + bar("Admin", "Cory &amp; Carissa only")
             + ADMIN_BODY
             + "</main>\n" + ADMIN_JS

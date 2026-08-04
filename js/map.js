@@ -20,6 +20,11 @@
    ========================================================================== */
 
 var SHEET_CSV = "";                      // <- paste the published CSV URL here
+/* The merged list: the committed file plus anything approved in the admin
+   screen. Approving a stand puts it on the map on the next load, with no
+   rebuild and no reimport. If the function is missing — this file also runs on
+   sites that have none — the static file is used instead. */
+var LIVE      = "/.netlify/functions/stands";
 var FALLBACK  = "/data/stands.json";
 var LANDMARKS = "/data/landmarks.json";
 var ROADS     = "/data/roads.json";
@@ -412,6 +417,17 @@ function fail(msg) {
       .catch(function () { fail("The map could not load."); });
   }
 
+  function useLive() {
+    fetch(LIVE)
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        // An empty answer means something is wrong upstream, not that every
+        // farm stand closed. Fall back rather than show an empty map.
+        if (d.stands && d.stands.length) boot(d.stands); else useJSON();
+      })
+      .catch(useJSON);
+  }
+
   if (SHEET_CSV) {
     fetch(SHEET_CSV)
       .then(function (r) { if (!r.ok) throw 0; return r.text(); })
@@ -419,8 +435,8 @@ function fail(msg) {
         var s = rowsToStands(parseCSV(t));
         if (s.length) boot(s); else useJSON();   // empty sheet must not empty the map
       })
-      .catch(useJSON);
+      .catch(useLive);
   } else {
-    useJSON();
+    useLive();
   }
 })();
