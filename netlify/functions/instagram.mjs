@@ -205,7 +205,70 @@ const CACHE = {
   "Netlify-CDN-Cache-Control": "public, max-age=1800, stale-while-revalidate=86400",
 };
 
+/**
+ * Diagnostic: can this token read Stories?
+ *
+ * Cory wants Stories, not grid posts — Stories are where Carissa says what
+ * went on the shelf this morning, and a grid post is the polished version
+ * that comes later. So the whole feature turns on one question: does the
+ * `/me/stories` edge answer for a token issued through Instagram Login?
+ *
+ * Meta's own docs are ambiguous — the comparison table does not list stories
+ * under either login type, and the third-party write-ups contradict each
+ * other. Rather than argue about it, ask the API. That is the same lesson the
+ * embed-scraper taught: CHECK WHETHER IT IS THERE AT ALL before building
+ * anything on top of the assumption.
+ *
+ * Deliberately returns no URLs, no captions, no thumbnails — only whether the
+ * edge answered, how many items came back, and Meta's own error text. Stories
+ * are not as public as grid posts, and this endpoint is.
+ */
+async function storiesProbe(token) {
+  if (!token) return { ok: false, reason: "IG_TOKEN is not set" };
+  const out = {};
+  try {
+    const who = await fetch(`${GRAPH}/me?fields=id,username&access_token=${encodeURIComponent(token)}`);
+    const w = await who.json();
+    out.account = { status: who.status, username: w.username || null, id: w.id || null };
+    if (w.error) out.account.error = w.error.message;
+  } catch (err) {
+    out.account = { error: String(err && err.message ? err.message : err) };
+  }
+  try {
+    const res = await fetch(`${GRAPH}/me/stories?fields=id,media_type,timestamp&access_token=${encodeURIComponent(token)}`);
+    const body = await res.json();
+    out.stories = {
+      httpStatus: res.status,
+      supported: res.ok,
+      count: Array.isArray(body.data) ? body.data.length : null,
+      // The distinction that matters: "this edge does not exist for your token"
+      // is a permanent no, "there are no active stories right now" is a
+      // 24-hour no and the feature is buildable.
+      error: body.error ? {
+        message: body.error.message,
+        type: body.error.type,
+        code: body.error.code,
+        subcode: body.error.error_subcode || null
+      } : null,
+      // Timestamps only. Enough to prove freshness without publishing content.
+      when: Array.isArray(body.data) ? body.data.map((s) => s.timestamp || null) : null
+    };
+  } catch (err) {
+    out.stories = { error: String(err && err.message ? err.message : err) };
+  }
+  return out;
+}
+
 export default async (req) => {
+  // ?probe=stories — see storiesProbe above. One call settles a question that
+  // documentation would not.
+  try {
+    if (new URL(req.url).searchParams.get("probe") === "stories") {
+      return Response.json(await storiesProbe(await currentToken()),
+                           { headers: { "Cache-Control": "no-store" } });
+    }
+  } catch (err) { /* fall through to the normal feed */ }
+
   // Diagnostic. ?peek=0..5 dumps what Instagram actually returned for that
   // pinned post, so a broken extractor can be fixed in one round instead of
   // three. Harmless to leave in — it exposes nothing that is not public.
