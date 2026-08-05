@@ -19,7 +19,18 @@
 import standsData from "../../data/stands.json";
 import { STANDS } from "./_lib/admin.mjs";
 
-const PUBLIC_FIELDS = ["name", "address", "lat", "lng", "hours", "sells", "url", "tags", "ours"];
+/**
+ * The whitelist. Anything not named here never leaves the server.
+ *
+ * `phone` is on the list and `email` is not, and that is deliberate. The map
+ * renders a Call link, so a stand's phone number earns its place. No screen
+ * has ever rendered an email address — it was riding along in the payload for
+ * free, which is the worst kind of exposure: all of the risk, none of the use.
+ *
+ * toStand() never produces either field, so an approved submission still
+ * cannot carry contact details no matter what is on this list.
+ */
+const PUBLIC_FIELDS = ["name", "address", "lat", "lng", "hours", "sells", "phone", "url", "tags", "ours"];
 
 function scrub(s) {
   const out = {};
@@ -28,10 +39,19 @@ function scrub(s) {
 }
 
 export default async () => {
-  // A copy, because the imported module object is shared between invocations
-  // on a warm function — mutating it would let one request's overlay leak into
-  // the next one's response.
-  const stands = (standsData.stands || []).map((s) => ({ ...s }));
+  // scrub(), not a spread.
+  //
+  // The first version copied the committed records wholesale and only ran the
+  // whitelist over approved submissions — so the eighteen third-party stands
+  // in data/stands.json shipped their owners' personal Gmail addresses to
+  // every visitor, in a JSON endpoint, sorted and ready to harvest. The
+  // whitelist has to sit on the way OUT, not on one of the two ways in.
+  //
+  // scrub() also returns a fresh object, which incidentally fixes the reason
+  // the spread was here: the imported module object is shared between
+  // invocations on a warm function, and mutating it would let one request's
+  // overlay leak into the next one's response.
+  const stands = (standsData.stands || []).map(scrub);
 
   let added = 0;
   let note = null;

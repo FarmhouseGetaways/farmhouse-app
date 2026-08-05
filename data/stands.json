@@ -1,347 +1,335 @@
 {
- "_source": "Exported from the 'Ramona Farm Stands - V6' Google My Map. Regenerate with tools/kml-to-json.py.",
- "stands": [
-  {
-   "name": "Mini Barn Market",
-   "address": "17111 Whirlwind Ln, Ramona, CA 92065",
-   "lat": 33.0217514,
-   "lng": -116.9316667,
-   "hours": "24-7, 365",
-   "phone": "760-232-6999",
-   "email": "minibarnmarket@gmail.com",
-   "url": "https://www.minibarnmarket.com/",
-   "tags": [
-    "produce"
-   ],
-   "ours": true
-  },
-  {
-   "name": "Amor Mi Vida Farm",
-   "address": "18585 Oak Ridge Ln Ramona, CA 92065",
-   "lat": 33.0366981,
-   "lng": -116.8238029,
-   "hours": "Fri: 2PM - 6PM Sat: 9AM - 4PM Sun: 9AM - 4PM",
-   "phone": "(760) 445-2673",
-   "url": "https://amormividafarm.net",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Black Mountain Farm",
-   "address": "680 Rancho Trail, Ramona, CA 92065",
-   "lat": 33.0763377,
-   "lng": -116.8668147,
-   "hours": "9AM - 6PM Daily",
-   "phone": "(858) 735-7794",
-   "email": "info@farmblackmountain.com",
-   "url": "https://farmblackmountain.com/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Broken Bit Ranch",
-   "address": "17048 Whirlwind Ln, Ramona, CA 92065",
-   "lat": 33.0201454,
-   "lng": -116.9320378,
-   "hours": "Jan - May 24-7",
-   "email": "lori@thebrokenbitranch.com",
-   "url": "https://thebrokenbitranch.com/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "California Farm Life",
-   "address": "18409 Rangeland Rd, Ramona, CA 92065",
-   "lat": 33.0514903,
-   "lng": -116.9309207,
-   "phone": "760-789-7201",
-   "url": "https://www.californiafarmlife.com/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Carrisito Ranch",
-   "address": "25700 Highway 79, Santa Ysabel, CA 92070",
-   "lat": 33.1984789,
-   "lng": -116.7101428,
-   "phone": "760-703-4926",
-   "email": "rowlynda@gmail.com",
-   "url": "https://www.carrisitoranch.org/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Connelly Farms",
-   "address": "456 Telford Ln Ramona, CA 92065",
-   "lat": 33.0365991,
-   "lng": -116.8509711,
-   "phone": "(760) 789-3768",
-   "url": "https://connellyfarms.com/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Corner Coop Bakery",
-   "address": "1424 Welsh Way, Ramona, CA 92065",
-   "lat": 33.0247051,
-   "lng": -116.8703705,
-   "url": "https://www.facebook.com/people/The-Corner-Coop-Bakery/61581883975098/",
-   "tags": [
-    "bakery"
-   ]
-  },
-  {
-   "name": "Early Light Farms",
-   "address": "23162 Sageland Dr, Ramona, CA 92065",
-   "lat": 33.0377464,
-   "lng": -116.8150852,
-   "email": "dawn@earlylightfarms.com",
-   "url": "https://earlylightfarms.com/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Elkins Acres Market",
-   "address": "711 East Old Julian Hwy, Ramona, CA 92065",
-   "lat": 33.0389891,
-   "lng": -116.8288741,
-   "hours": "24-7, 365",
-   "url": "https://www.instagram.com/elkinsacresmarket/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Golden Eagle Farm",
-   "address": "27236 Highway 78, Ramona, CA 92065",
-   "lat": 33.0736637,
-   "lng": -116.7420871,
-   "email": "admin@thegoldeneaglefarm.com",
-   "url": "https://thegoldeneaglefarm.com/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Happy Hens",
-   "address": "2176 Ramona St, Ramona, CA 92065",
-   "lat": 33.0089849,
-   "lng": -116.8787378,
-   "hours": "Mon-Fri 9AM - 5PM",
-   "phone": "(760) 870-5162",
-   "url": "https://happy-hens.com/",
-   "tags": [
-    "eggs"
-   ]
-  },
-  {
-   "name": "Homestead Headquarters",
-   "address": "3342 Main Street, Ramona, CA 92065",
-   "lat": 33.014287,
-   "lng": -116.9066391,
-   "hours": "24-7, 365",
-   "phone": "760-870-5102",
-   "email": "Contacthomesteadheadquarters@gmail.com",
-   "url": "https://www.ramonarefillery.com/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Indian Iron Farms",
-   "address": "18333 Old Carousel Ranch Road, Ramona, CA 92065",
-   "lat": 33.0135807,
-   "lng": -116.9312307,
-   "hours": "Mon, Tue, Fri, Sat & Sun 11AM - 8PM",
-   "phone": "619-368-6777",
-   "email": "indianironfarmsllc@gmail.com",
-   "url": "http://www.indianironfarms.com",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Indian Summer Farms",
-   "address": "330 Elm St, Ramona, CA 92065",
-   "lat": 33.0477508,
-   "lng": -116.8667291,
-   "hours": "Seasonal Sat 9AM - 2PM",
-   "url": "https://www.instagram.com/indian_summer_farm/?hl=en",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "La Hacienda Farm Stand",
-   "address": "16976 Highland Valley Road, Ramona, CA 92065",
-   "lat": 33.033605,
-   "lng": -116.9599368,
-   "hours": "Summer: Fri-Sat 10AM - 3PM Winter: Thu & Fri: 7AM - 3PM Sat & Sun: 10AM - 3PM",
-   "email": "lachispafarm@gmail.com",
-   "url": "https://www.instagram.com/la_chispa_farm/?hl=en",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "La Tiendita",
-   "address": "15677 Mussey Grade Rd, Ramona, CA 92065",
-   "lat": 33.000572,
-   "lng": -116.9247068,
-   "tags": [
-    "prepared"
-   ]
-  },
-  {
-   "name": "Lil Patch of Heaven",
-   "address": "2108 Orange Ave, Ramona, CA 92065",
-   "lat": 33.078541,
-   "lng": -116.8368413,
-   "hours": "8AM to 8PM Daily",
-   "phone": "(760) 814-4836",
-   "email": "cbeene32@gmail.com",
-   "url": "https://cbeene32.wixsite.com/lilpatchofheaven",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Magnolia Ln Market",
-   "address": "130 Magnolia Ave, Ramona, CA 92065",
-   "lat": 33.0516902,
-   "lng": -116.8452032,
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "MMM Farmstand",
-   "address": "2940 Duck Pond Ln, Ramona, CA 92065",
-   "lat": 32.9947045,
-   "lng": -116.8965113,
-   "hours": "24-7, 365",
-   "url": "https://www.instagram.com/heathers_homesteading",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Olive & Oak Bakery",
-   "address": "737 Olive St, Ramona, CA 92065",
-   "lat": 33.047623,
-   "lng": -116.8673242,
-   "phone": "619-635-9228",
-   "email": "ashliec@live.com",
-   "url": "https://www.facebook.com/p/Olive-Oak-Bakery-61564885245741/",
-   "tags": [
-    "bakery"
-   ]
-  },
-  {
-   "name": "Page's Organics",
-   "address": "1914 Pamo Rd Ramona, CA 92065",
-   "lat": 33.0752065,
-   "lng": -116.8595304,
-   "hours": "8AM to Sunset",
-   "phone": "(760) 789-3859",
-   "url": "https://www.facebook.com/killertomatostand/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Rad Living Ranch",
-   "address": "16796 highland Valley Rd, Ramona, CA 92065",
-   "lat": 33.03124,
-   "lng": -116.965934,
-   "hours": "24-7, 365",
-   "url": "https://www.instagram.com/radlivingranch",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Ramona Beautiful Farm and Flowers",
-   "address": "816 Pine Way, Ramona, CA 92065",
-   "lat": 33.0712467,
-   "lng": -116.8704477,
-   "hours": "Fri-Sun 8AM - 6PM",
-   "url": "https://www.instagram.com/ramonabeautifulfarm",
-   "tags": [
-    "flowers"
-   ]
-  },
-  {
-   "name": "Ramona Fresh Fruits",
-   "address": "18131 Traylor Rd Ramona, CA 92065",
-   "lat": 33.0273662,
-   "lng": -116.9372795,
-   "hours": "Fri - Wed 9AM - 6PM Closed Thursdays",
-   "phone": "(619) 630-4693",
-   "url": "https://ramonafreshfruits.com/",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "SD's Micro Egg Stand",
-   "address": "1859 Montecito Rd, Ramona, CA 92065",
-   "lat": 33.0412647,
-   "lng": -116.888004,
-   "hours": "24-7",
-   "email": "shanelledm@gmail.com",
-   "tags": [
-    "eggs"
-   ]
-  },
-  {
-   "name": "Tamales Jovita",
-   "address": "17066 Whirlwind ln, Ramona CA 92065",
-   "lat": 33.0206283,
-   "lng": -116.9321,
-   "hours": "24-7, 365",
-   "tags": [
-    "prepared"
-   ]
-  },
-  {
-   "name": "The Beekeepers Oven",
-   "address": "29303 CA-78, Ramona, CA 92065",
-   "lat": 33.1009348,
-   "lng": -116.6962606,
-   "url": "https://www.instagram.com/thebeekeepersoven/",
-   "tags": [
-    "bakery",
-    "honey"
-   ]
-  },
-  {
-   "name": "Trumpers",
-   "address": "27724 CA-78, Ramona, CA 92065",
-   "lat": 33.0671154,
-   "lng": -116.7261776,
-   "hours": "Sat: 8:30AM - 5PM Sun: 8:30AM - 5PM",
-   "phone": "760-525-4859",
-   "tags": [
-    "produce"
-   ]
-  },
-  {
-   "name": "Wild Hearts Bakery",
-   "address": "1317 Washington Street, Ramona, CA 92065",
-   "lat": 33.073581,
-   "lng": -116.881603,
-   "hours": "7am-7pm Friday- Sunday",
-   "tags": [
-    "bakery"
-   ]
-  }
- ]
+  "_source": "Exported from the 'Ramona Farm Stands - V6' Google My Map. Regenerate with tools/kml-to-json.py.",
+  "stands": [
+    {
+      "name": "Mini Barn Market",
+      "address": "17111 Whirlwind Ln, Ramona, CA 92065",
+      "lat": 33.0217514,
+      "lng": -116.9316667,
+      "hours": "24-7, 365",
+      "phone": "760-232-6999",
+      "url": "https://www.minibarnmarket.com/",
+      "tags": [
+        "produce"
+      ],
+      "ours": true
+    },
+    {
+      "name": "Amor Mi Vida Farm",
+      "address": "18585 Oak Ridge Ln Ramona, CA 92065",
+      "lat": 33.0366981,
+      "lng": -116.8238029,
+      "hours": "Fri: 2PM - 6PM Sat: 9AM - 4PM Sun: 9AM - 4PM",
+      "phone": "(760) 445-2673",
+      "url": "https://amormividafarm.net",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Black Mountain Farm",
+      "address": "680 Rancho Trail, Ramona, CA 92065",
+      "lat": 33.0763377,
+      "lng": -116.8668147,
+      "hours": "9AM - 6PM Daily",
+      "phone": "(858) 735-7794",
+      "url": "https://farmblackmountain.com/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Broken Bit Ranch",
+      "address": "17048 Whirlwind Ln, Ramona, CA 92065",
+      "lat": 33.0201454,
+      "lng": -116.9320378,
+      "hours": "Jan - May 24-7",
+      "url": "https://thebrokenbitranch.com/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "California Farm Life",
+      "address": "18409 Rangeland Rd, Ramona, CA 92065",
+      "lat": 33.0514903,
+      "lng": -116.9309207,
+      "phone": "760-789-7201",
+      "url": "https://www.californiafarmlife.com/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Carrisito Ranch",
+      "address": "25700 Highway 79, Santa Ysabel, CA 92070",
+      "lat": 33.1984789,
+      "lng": -116.7101428,
+      "phone": "760-703-4926",
+      "url": "https://www.carrisitoranch.org/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Connelly Farms",
+      "address": "456 Telford Ln Ramona, CA 92065",
+      "lat": 33.0365991,
+      "lng": -116.8509711,
+      "phone": "(760) 789-3768",
+      "url": "https://connellyfarms.com/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Corner Coop Bakery",
+      "address": "1424 Welsh Way, Ramona, CA 92065",
+      "lat": 33.0247051,
+      "lng": -116.8703705,
+      "url": "https://www.facebook.com/people/The-Corner-Coop-Bakery/61581883975098/",
+      "tags": [
+        "bakery"
+      ]
+    },
+    {
+      "name": "Early Light Farms",
+      "address": "23162 Sageland Dr, Ramona, CA 92065",
+      "lat": 33.0377464,
+      "lng": -116.8150852,
+      "url": "https://earlylightfarms.com/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Elkins Acres Market",
+      "address": "711 East Old Julian Hwy, Ramona, CA 92065",
+      "lat": 33.0389891,
+      "lng": -116.8288741,
+      "hours": "24-7, 365",
+      "url": "https://www.instagram.com/elkinsacresmarket/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Golden Eagle Farm",
+      "address": "27236 Highway 78, Ramona, CA 92065",
+      "lat": 33.0736637,
+      "lng": -116.7420871,
+      "url": "https://thegoldeneaglefarm.com/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Happy Hens",
+      "address": "2176 Ramona St, Ramona, CA 92065",
+      "lat": 33.0089849,
+      "lng": -116.8787378,
+      "hours": "Mon-Fri 9AM - 5PM",
+      "phone": "(760) 870-5162",
+      "url": "https://happy-hens.com/",
+      "tags": [
+        "eggs"
+      ]
+    },
+    {
+      "name": "Homestead Headquarters",
+      "address": "3342 Main Street, Ramona, CA 92065",
+      "lat": 33.014287,
+      "lng": -116.9066391,
+      "hours": "24-7, 365",
+      "phone": "760-870-5102",
+      "url": "https://www.ramonarefillery.com/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Indian Iron Farms",
+      "address": "18333 Old Carousel Ranch Road, Ramona, CA 92065",
+      "lat": 33.0135807,
+      "lng": -116.9312307,
+      "hours": "Mon, Tue, Fri, Sat & Sun 11AM - 8PM",
+      "phone": "619-368-6777",
+      "url": "http://www.indianironfarms.com",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Indian Summer Farms",
+      "address": "330 Elm St, Ramona, CA 92065",
+      "lat": 33.0477508,
+      "lng": -116.8667291,
+      "hours": "Seasonal Sat 9AM - 2PM",
+      "url": "https://www.instagram.com/indian_summer_farm/?hl=en",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "La Hacienda Farm Stand",
+      "address": "16976 Highland Valley Road, Ramona, CA 92065",
+      "lat": 33.033605,
+      "lng": -116.9599368,
+      "hours": "Summer: Fri-Sat 10AM - 3PM Winter: Thu & Fri: 7AM - 3PM Sat & Sun: 10AM - 3PM",
+      "url": "https://www.instagram.com/la_chispa_farm/?hl=en",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "La Tiendita",
+      "address": "15677 Mussey Grade Rd, Ramona, CA 92065",
+      "lat": 33.000572,
+      "lng": -116.9247068,
+      "tags": [
+        "prepared"
+      ]
+    },
+    {
+      "name": "Lil Patch of Heaven",
+      "address": "2108 Orange Ave, Ramona, CA 92065",
+      "lat": 33.078541,
+      "lng": -116.8368413,
+      "hours": "8AM to 8PM Daily",
+      "phone": "(760) 814-4836",
+      "url": "https://cbeene32.wixsite.com/lilpatchofheaven",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Magnolia Ln Market",
+      "address": "130 Magnolia Ave, Ramona, CA 92065",
+      "lat": 33.0516902,
+      "lng": -116.8452032,
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "MMM Farmstand",
+      "address": "2940 Duck Pond Ln, Ramona, CA 92065",
+      "lat": 32.9947045,
+      "lng": -116.8965113,
+      "hours": "24-7, 365",
+      "url": "https://www.instagram.com/heathers_homesteading",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Olive & Oak Bakery",
+      "address": "737 Olive St, Ramona, CA 92065",
+      "lat": 33.047623,
+      "lng": -116.8673242,
+      "phone": "619-635-9228",
+      "url": "https://www.facebook.com/p/Olive-Oak-Bakery-61564885245741/",
+      "tags": [
+        "bakery"
+      ]
+    },
+    {
+      "name": "Page's Organics",
+      "address": "1914 Pamo Rd Ramona, CA 92065",
+      "lat": 33.0752065,
+      "lng": -116.8595304,
+      "hours": "8AM to Sunset",
+      "phone": "(760) 789-3859",
+      "url": "https://www.facebook.com/killertomatostand/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Rad Living Ranch",
+      "address": "16796 highland Valley Rd, Ramona, CA 92065",
+      "lat": 33.03124,
+      "lng": -116.965934,
+      "hours": "24-7, 365",
+      "url": "https://www.instagram.com/radlivingranch",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Ramona Beautiful Farm and Flowers",
+      "address": "816 Pine Way, Ramona, CA 92065",
+      "lat": 33.0712467,
+      "lng": -116.8704477,
+      "hours": "Fri-Sun 8AM - 6PM",
+      "url": "https://www.instagram.com/ramonabeautifulfarm",
+      "tags": [
+        "flowers"
+      ]
+    },
+    {
+      "name": "Ramona Fresh Fruits",
+      "address": "18131 Traylor Rd Ramona, CA 92065",
+      "lat": 33.0273662,
+      "lng": -116.9372795,
+      "hours": "Fri - Wed 9AM - 6PM Closed Thursdays",
+      "phone": "(619) 630-4693",
+      "url": "https://ramonafreshfruits.com/",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "SD's Micro Egg Stand",
+      "address": "1859 Montecito Rd, Ramona, CA 92065",
+      "lat": 33.0412647,
+      "lng": -116.888004,
+      "hours": "24-7",
+      "tags": [
+        "eggs"
+      ]
+    },
+    {
+      "name": "Tamales Jovita",
+      "address": "17066 Whirlwind ln, Ramona CA 92065",
+      "lat": 33.0206283,
+      "lng": -116.9321,
+      "hours": "24-7, 365",
+      "tags": [
+        "prepared"
+      ]
+    },
+    {
+      "name": "The Beekeepers Oven",
+      "address": "29303 CA-78, Ramona, CA 92065",
+      "lat": 33.1009348,
+      "lng": -116.6962606,
+      "url": "https://www.instagram.com/thebeekeepersoven/",
+      "tags": [
+        "bakery",
+        "honey"
+      ]
+    },
+    {
+      "name": "Trumpers",
+      "address": "27724 CA-78, Ramona, CA 92065",
+      "lat": 33.0671154,
+      "lng": -116.7261776,
+      "hours": "Sat: 8:30AM - 5PM Sun: 8:30AM - 5PM",
+      "phone": "760-525-4859",
+      "tags": [
+        "produce"
+      ]
+    },
+    {
+      "name": "Wild Hearts Bakery",
+      "address": "1317 Washington Street, Ramona, CA 92065",
+      "lat": 33.073581,
+      "lng": -116.881603,
+      "hours": "7am-7pm Friday- Sunday",
+      "tags": [
+        "bakery"
+      ]
+    }
+  ]
 }
