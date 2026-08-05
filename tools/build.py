@@ -37,11 +37,25 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # domain without a rebuild. Only the canonical/OG tags need the real one.
 SITE = "https://app.farmhousegetaways.com"
 
-APP_NAME = "Farmhouse Getaways"
-APP_SHORT = "Farmhouse"
-APP_DESC = ("Ramona, California — a working ranch and a mountain retreat, the "
-            "24/7 farm stand at the back gate, and the map to every farm stand "
-            "on the drive.")
+# WHY THE APP IS CALLED MINI BARN MARKET AND NOT FARMHOUSE GETAWAYS
+#
+# The app carries all three brands and the parent company is Farmhouse
+# Getaways, so the obvious name is the wrong one. An icon lives or dies on the
+# reason somebody taps it, and the reason here is daily: what went on the shelf
+# this morning. Nobody opens an app to look at a ranch they booked in March.
+# They open it because the sourdough might be out.
+#
+# So the icon takes the name of the thing that earns the daily tap. Stays,
+# Farmstand.TV and the map are all still inside it.
+#
+# APP_SHORT is what shows under the icon. iOS truncates around eleven
+# characters, so "Mini Barn Market" would render as "Mini Barn M…" — which is
+# why the short name is the one people say out loud anyway.
+APP_NAME = "Mini Barn Market"
+APP_SHORT = "Mini Barn"
+APP_DESC = ("What is on the shelf today at the Mini Barn Market in Ramona, "
+            "California — plus the map to the farm stands on the drive, and "
+            "the ranch and the mountain retreat at Farmhouse Getaways.")
 
 FHG  = "https://farmhousegetaways.com"
 MBM  = "https://minibarnmarket.com"
@@ -60,6 +74,22 @@ RBR_ID = "813711"
 MR_ID  = "813713"
 
 CSS_HASH = hashlib.sha1((ROOT / "css/app.css").read_bytes()).hexdigest()[:8]
+
+# ICON_HASH exists because /icons/* is served `immutable, max-age=31536000`.
+# That header is right — icons are big and almost never change — but it means
+# a redrawn icon under the same filename never reaches anybody. A browser that
+# already has it will not ask again for a year, and neither will the service
+# worker's precache, because its fetch goes through the same HTTP cache.
+#
+# So the URL changes when the bytes change, the same trick already used for
+# the CSS. `immutable` is per-URL, so a new query string is a new entry.
+#
+# One thing this canNOT fix: on iOS the home screen icon is baked in at Add to
+# Home Screen time. Anybody already installed keeps the old picture until they
+# remove the icon and add it again. There is no way around that from here.
+ICON_HASH = hashlib.sha1(
+    b"".join(p.read_bytes() for p in sorted((ROOT / "icons").glob("*.png")))
+).hexdigest()[:8]
 
 TOURS = [
     ("bHJ91irOsLg", "Mini Barn Market",      "The farm stand at our own back gate", "5:01"),
@@ -115,8 +145,8 @@ def head(title, path, accent, extra_head=""):
 <meta name="apple-mobile-web-app-title" content="{APP_SHORT}">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v={ICON_HASH}">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png?v={ICON_HASH}">
 {FONTS}
 <link rel="stylesheet" href="/css/app.css?v={CSS_HASH}">
 <style>:root {{ --accent: {accent}; }}</style>
@@ -680,8 +710,8 @@ self.addEventListener("push", (e) => {
   const title = d.title || "Mini Barn Market";
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || "Something new at the stand.",
-    icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    icon: "/icons/icon-192.png?v=__ICONV__",
+    badge: "/icons/icon-192.png?v=__ICONV__",
     image: d.image || undefined,
     // Same tag replaces rather than stacks, so two runs of the watcher can
     // never leave two identical notifications on the lock screen.
@@ -779,9 +809,9 @@ MANIFEST = {
     "theme_color": "#12100E",
     "categories": ["travel", "food", "lifestyle"],
     "icons": [
-        {"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
-        {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
-        {"src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png",
+        {"src": f"/icons/icon-192.png?v={ICON_HASH}", "sizes": "192x192", "type": "image/png"},
+        {"src": f"/icons/icon-512.png?v={ICON_HASH}", "sizes": "512x512", "type": "image/png"},
+        {"src": f"/icons/maskable-512.png?v={ICON_HASH}", "sizes": "512x512", "type": "image/png",
          "purpose": "maskable"},
     ],
     "shortcuts": [
@@ -844,7 +874,14 @@ def main():
                 f"/js/map.js?v={CSS_HASH}", "/manifest.webmanifest"]
     for pattern in ("data/*.json", "images/*", "icons/*"):
         for f in sorted(ROOT.glob(pattern)):
-            precache.append("/" + f.relative_to(ROOT).as_posix())
+            url = "/" + f.relative_to(ROOT).as_posix()
+            # Icons carry the same hash the pages ask for, or the precache and
+            # the page would be fetching two different URLs for one file — the
+            # cache would hold the old bytes and the page would still go to the
+            # network for the new ones.
+            if url.startswith("/icons/"):
+                url += f"?v={ICON_HASH}"
+            precache.append(url)
 
     version = hashlib.sha1(
         ("".join(pages.values()) + (ROOT / "css/app.css").read_text()
@@ -852,7 +889,8 @@ def main():
 
     sw = (SW_TEMPLATE
           .replace("__VERSION__", version)
-          .replace("__PRECACHE__", json.dumps(precache, indent=2)))
+          .replace("__PRECACHE__", json.dumps(precache, indent=2))
+          .replace("__ICONV__", ICON_HASH))
     (ROOT / "sw.js").write_text(sw)
     (ROOT / "js/app.js").write_text(APP_JS)
 
