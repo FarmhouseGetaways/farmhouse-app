@@ -360,6 +360,11 @@ p.lede { font-size: 1.04rem; line-height: 1.6; color: #CFC7BA; }
 }
 body.is-offline .offline { display: block; }
 
-/* the install nudge — only shown when the browser says it is installable */
+/* The card is always there — on iOS there is no prompt to wait for, and a
+   hidden install card on the one platform that most needs instructions was
+   exactly backwards. Only the one-tap BUTTON is conditional, because outside
+   Chrome it cannot do anything. */
 .install { display: none; }
-body.can-install .install { display: block; }
+body.can-install .install { display: inline-flex; }
+/* Once it is installed, stop asking. */
+@media (display-mode: standalone) { #install-card { display: none; } }

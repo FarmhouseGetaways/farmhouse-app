@@ -29,6 +29,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from admin import ADMIN_BODY, ADMIN_CSS, ADMIN_JS
+from install_page import INSTALL_BODY, INSTALL_CSS, INSTALL_JS
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -222,12 +223,15 @@ def page_today():
     </div>
   </section>
 
-  <section class="sec install">
-    <div class="card card-pad">
+  <section class="sec">
+    <div class="card card-pad" id="install-card">
       <h2 class="mid">Put this on your home screen.</h2>
-      <p>It works with no signal once it is installed &mdash; useful out here,
+      <p>It opens like an app and works with no signal &mdash; useful out here,
         where the bars come and go.</p>
-      <div class="btn-row"><button class="btn btn-go" id="install">Install</button></div>
+      <div class="btn-row">
+        <button class="btn btn-go install" id="install">Install</button>
+        <a class="btn btn-line" href="/install">Show me how</a>
+      </div>
     </div>
   </section>
 
@@ -787,6 +791,18 @@ MANIFEST = {
 }
 
 
+def page_install():
+    """
+    Reachable from the Today screen and from a link anyone can send. It is not
+    a tab: somebody who has already installed the app should never see a tab
+    telling them to install it.
+    """
+    return (head("Install the app", "/install", "var(--mbm)", INSTALL_CSS)
+            + bar("Install", "Farmhouse Getaways")
+            + INSTALL_BODY + tabs("") + INSTALL_JS
+            + '<script src="/js/app.js?v=' + CSS_HASH + '"></script>\n</body>\n</html>\n')
+
+
 def page_admin():
     """
     No tab bar. It is a tool, not a section of the app, and a tab pointing at a
@@ -810,6 +826,7 @@ def main():
         "stay.html": page_stay(),
         "watch.html": page_watch(),
         "more.html": page_more(),
+        "install.html": page_install(),
         "admin.html": page_admin(),
     }
     for name, html in pages.items():
@@ -822,7 +839,7 @@ def main():
     # that is what the browser asks for.
     # /admin is deliberately absent: an offline copy of a login screen is
     # useless, and caching it means a signed-out shell can outlive a deploy.
-    precache = ["/", "/map", "/stay", "/watch", "/more",
+    precache = ["/", "/map", "/stay", "/watch", "/more", "/install",
                 f"/css/app.css?v={CSS_HASH}", f"/js/app.js?v={CSS_HASH}",
                 f"/js/map.js?v={CSS_HASH}", "/manifest.webmanifest"]
     for pattern in ("data/*.json", "images/*", "icons/*"):
