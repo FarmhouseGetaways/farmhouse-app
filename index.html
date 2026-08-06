@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=52c766ca">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png?v=52c766ca">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=5e940209">
+<link rel="stylesheet" href="/css/app.css?v=e68376ea">
 <style>:root { --accent: var(--mbm); }</style>
 
 </head>
@@ -42,11 +42,17 @@
     <a href="https://www.google.com/maps/dir/?api=1&destination=33.0217514,-116.9316667" rel="noopener" target="_blank"><span class="q-shop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 11.2A2 2 0 0 1 16.8 21H7.2a2 2 0 0 1-2-1.8L4 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span>Take me there</a>
   </div>
 
-  <section class="sec">
+  <section class="sec" id="stories-sec">
     <p class="eyebrow">On the shelf today</p>
     <h1 class="big">Carissa posts it as it <em class="lit">lands.</em></h1>
     <p>What is in the barn changes daily, so the only place that is ever
-      actually current is Instagram. Live, every day.</p>
+      actually current is her story. Live, every day.</p>
+    <div class="story-row" id="stories" hidden></div>
+    <div class="story-none" id="stories-none" hidden></div>
+  </section>
+
+  <section class="sec">
+    <p class="eyebrow">The rest of the account</p>
     <div class="ig-grid" id="ig"></div>
     <div class="btn-row">
       <a class="btn btn-go" href="https://www.instagram.com/minibarnmarket/" rel="noopener" target="_blank">Open Instagram</a>
@@ -105,6 +111,117 @@
 <nav class="tabs" aria-label="Sections"><a class="tab" href="/" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10.5V20h12v-9.5"/><path d="M10 20v-5h4v5"/></svg><span>Today</span></a><a class="tab" href="/map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3z"/><path d="M9 3v15M15 6v15"/></svg><span>Map</span></a><a class="tab" href="/stay"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"/><path d="M6 12V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4"/><path d="M3 20h18"/></svg><span>Stay</span></a><a class="tab" href="/watch"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="13" rx="2.5"/><path d="M10.5 9.2v5.6l5-2.8-5-2.8z"/></svg><span>Watch</span></a><a class="tab" href="/more"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg><span>More</span></a></nav>
 <div class="offline" role="status">You are offline. The map, the stands and everything you have already opened still work.</div>
 <script>
+/* The Stories strip.
+   ------------------------------------------------------------------------
+   THE EMPTY STATE IS THE FEATURE, NOT THE FALLBACK.
+
+   Instagram deletes Stories after 24 hours, so for most of any given day
+   there is nothing live and this section has nothing to show. That is the
+   normal case, not the broken one. A blank grid on a phone reads as broken,
+   and "no stories" reads as a dead account — so when there is nothing up, the
+   section says something true and useful instead: when the last one was, and
+   that the way to catch the next one is to be told about it.
+
+   The last-seen timestamp is the ONLY thing kept server-side. No copy of the
+   picture, no copy of the words. A story is ephemeral on purpose.
+   ------------------------------------------------------------------------ */
+(function () {
+  var row = document.getElementById("stories");
+  var none = document.getElementById("stories-none");
+  if (!row || !none || !window.fetch) return;
+
+  function ago(iso) {
+    var t = Date.parse(iso);
+    if (!t) return "";
+    var mins = Math.round((Date.now() - t) / 60000);
+    if (mins < 2) return "just now";
+    if (mins < 60) return mins + " minutes ago";
+    var hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs === 1 ? "an hour ago" : hrs + " hours ago";
+    var days = Math.round(hrs / 24);
+    return days === 1 ? "yesterday" : days + " days ago";
+  }
+
+  /* Cory asked for the date and the time, not just "2 hours ago" — relative
+     alone is vague when you are deciding whether to get in the car. Stories
+     never live longer than a day, so the date is only ever today or
+     yesterday, which keeps the label short. */
+  function stamp(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    var now = new Date();
+    var sameDay = d.toDateString() === now.toDateString();
+    var yest = new Date(now.getTime() - 86400000).toDateString() === d.toDateString();
+    var day = sameDay ? "Today" : (yest ? "Yesterday" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+    var time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return day + " " + time;
+  }
+
+  function empty(lastSeen) {
+    var when = lastSeen ? ago(lastSeen) : "";
+    none.innerHTML =
+      '<p class="sn-head">Nothing up right now.</p>' +
+      '<p class="sn-body">Carissa posts when something lands on the shelf' +
+      (when ? ' &mdash; the last one was <b>' + when + '</b>.' : '.') +
+      ' Stories only last a day, so the way to catch one is to be told.</p>' +
+      '<div class="btn-row"><a class="btn btn-line" href="/install">Get told first</a></div>';
+    none.hidden = false;
+    row.hidden = true;
+  }
+
+  fetch("/.netlify/functions/stories", { headers: { accept: "application/json" } })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function (d) {
+      var list = (d && d.stories) || [];
+      if (!list.length) return empty(d && d.lastSeen);
+
+      list.forEach(function (s) {
+        var a = document.createElement("a");
+        a.className = "story";
+        a.href = s.link || "https://www.instagram.com/minibarnmarket/";
+        a.target = "_blank"; a.rel = "noopener";
+
+        var img = document.createElement("img");
+        img.loading = "lazy";
+        img.referrerPolicy = "no-referrer";
+        img.alt = "Carissa's story from " + stamp(s.when);
+        /* Story media URLs are signed and expire in hours. When one does not
+           load, the story still EXISTS — so keep the tile, keep the timestamp,
+           and send the tap to Instagram. Removing it would collapse the strip
+           into "Nothing up right now", which would be a lie, and the one lie
+           this section cannot afford: somebody drives out for nothing, or
+           worse, does not drive out at all. */
+        img.onerror = function () {
+          a.classList.add("no-img");
+          img.remove();
+          var f = document.createElement("span");
+          f.className = "story-fallback";
+          f.textContent = "See it on Instagram";
+          a.insertBefore(f, a.firstChild);
+        };
+        img.src = s.thumb;
+        a.appendChild(img);
+
+        if (s.type === "VIDEO") {
+          var play = document.createElement("span");
+          play.className = "story-play";
+          play.setAttribute("aria-hidden", "true");
+          a.appendChild(play);
+        }
+
+        var cap = document.createElement("span");
+        cap.className = "story-when";
+        cap.innerHTML = '<b>' + ago(s.when) + '</b>' + stamp(s.when);
+        a.appendChild(cap);
+
+        row.appendChild(a);
+      });
+      row.hidden = false;
+      none.hidden = true;
+    })
+    .catch(function () { empty(null); });
+})();
+</script><script>
 /* Same three-tier arrangement as the Mini Barn Market site: the function
    returns real stills with no Meta token by reading the posts' public embed
    pages server-side, and returns the account's latest media once IG_TOKEN is
@@ -132,6 +249,6 @@
     })
     .catch(function () { grid.remove(); });
 })();
-</script><script src="/js/app.js?v=5e940209"></script>
+</script><script src="/js/app.js?v=e68376ea"></script>
 </body>
 </html>

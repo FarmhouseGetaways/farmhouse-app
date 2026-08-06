@@ -207,11 +207,17 @@ def page_today():
     <a href="{MBM_DIR_G}" rel="noopener" target="_blank"><span class="q-shop">{icon('q-shop')}</span>Take me there</a>
   </div>
 
-  <section class="sec">
+  <section class="sec" id="stories-sec">
     <p class="eyebrow">On the shelf today</p>
     <h1 class="big">Carissa posts it as it <em class="lit">lands.</em></h1>
     <p>What is in the barn changes daily, so the only place that is ever
-      actually current is Instagram. Live, every day.</p>
+      actually current is her story. Live, every day.</p>
+    <div class="story-row" id="stories" hidden></div>
+    <div class="story-none" id="stories-none" hidden></div>
+  </section>
+
+  <section class="sec">
+    <p class="eyebrow">The rest of the account</p>
     <div class="ig-grid" id="ig"></div>
     <div class="btn-row">
       <a class="btn btn-go" href="{MBM_IG}" rel="noopener" target="_blank">Open Instagram</a>
@@ -268,7 +274,7 @@ def page_today():
 </div>
 """
     return shell("index", "Today", "Ramona, California", body,
-                 extra_body=IG_JS)
+                 extra_body=STORY_JS + IG_JS)
 
 
 # ---------------------------------------------------------------------------
@@ -471,6 +477,119 @@ document.addEventListener("click", function (e) {
   f.setAttribute("frameborder", "0");
   btn.parentNode.replaceChild(f, btn);
 });
+</script>"""
+
+STORY_JS = """<script>
+/* The Stories strip.
+   ------------------------------------------------------------------------
+   THE EMPTY STATE IS THE FEATURE, NOT THE FALLBACK.
+
+   Instagram deletes Stories after 24 hours, so for most of any given day
+   there is nothing live and this section has nothing to show. That is the
+   normal case, not the broken one. A blank grid on a phone reads as broken,
+   and "no stories" reads as a dead account — so when there is nothing up, the
+   section says something true and useful instead: when the last one was, and
+   that the way to catch the next one is to be told about it.
+
+   The last-seen timestamp is the ONLY thing kept server-side. No copy of the
+   picture, no copy of the words. A story is ephemeral on purpose.
+   ------------------------------------------------------------------------ */
+(function () {
+  var row = document.getElementById("stories");
+  var none = document.getElementById("stories-none");
+  if (!row || !none || !window.fetch) return;
+
+  function ago(iso) {
+    var t = Date.parse(iso);
+    if (!t) return "";
+    var mins = Math.round((Date.now() - t) / 60000);
+    if (mins < 2) return "just now";
+    if (mins < 60) return mins + " minutes ago";
+    var hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs === 1 ? "an hour ago" : hrs + " hours ago";
+    var days = Math.round(hrs / 24);
+    return days === 1 ? "yesterday" : days + " days ago";
+  }
+
+  /* Cory asked for the date and the time, not just "2 hours ago" — relative
+     alone is vague when you are deciding whether to get in the car. Stories
+     never live longer than a day, so the date is only ever today or
+     yesterday, which keeps the label short. */
+  function stamp(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    var now = new Date();
+    var sameDay = d.toDateString() === now.toDateString();
+    var yest = new Date(now.getTime() - 86400000).toDateString() === d.toDateString();
+    var day = sameDay ? "Today" : (yest ? "Yesterday" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+    var time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return day + " " + time;
+  }
+
+  function empty(lastSeen) {
+    var when = lastSeen ? ago(lastSeen) : "";
+    none.innerHTML =
+      '<p class="sn-head">Nothing up right now.</p>' +
+      '<p class="sn-body">Carissa posts when something lands on the shelf' +
+      (when ? ' &mdash; the last one was <b>' + when + '</b>.' : '.') +
+      ' Stories only last a day, so the way to catch one is to be told.</p>' +
+      '<div class="btn-row"><a class="btn btn-line" href="/install">Get told first</a></div>';
+    none.hidden = false;
+    row.hidden = true;
+  }
+
+  fetch("/.netlify/functions/stories", { headers: { accept: "application/json" } })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function (d) {
+      var list = (d && d.stories) || [];
+      if (!list.length) return empty(d && d.lastSeen);
+
+      list.forEach(function (s) {
+        var a = document.createElement("a");
+        a.className = "story";
+        a.href = s.link || "https://www.instagram.com/minibarnmarket/";
+        a.target = "_blank"; a.rel = "noopener";
+
+        var img = document.createElement("img");
+        img.loading = "lazy";
+        img.referrerPolicy = "no-referrer";
+        img.alt = "Carissa's story from " + stamp(s.when);
+        /* Story media URLs are signed and expire in hours. When one does not
+           load, the story still EXISTS — so keep the tile, keep the timestamp,
+           and send the tap to Instagram. Removing it would collapse the strip
+           into "Nothing up right now", which would be a lie, and the one lie
+           this section cannot afford: somebody drives out for nothing, or
+           worse, does not drive out at all. */
+        img.onerror = function () {
+          a.classList.add("no-img");
+          img.remove();
+          var f = document.createElement("span");
+          f.className = "story-fallback";
+          f.textContent = "See it on Instagram";
+          a.insertBefore(f, a.firstChild);
+        };
+        img.src = s.thumb;
+        a.appendChild(img);
+
+        if (s.type === "VIDEO") {
+          var play = document.createElement("span");
+          play.className = "story-play";
+          play.setAttribute("aria-hidden", "true");
+          a.appendChild(play);
+        }
+
+        var cap = document.createElement("span");
+        cap.className = "story-when";
+        cap.innerHTML = '<b>' + ago(s.when) + '</b>' + stamp(s.when);
+        a.appendChild(cap);
+
+        row.appendChild(a);
+      });
+      row.hidden = false;
+      none.hidden = true;
+    })
+    .catch(function () { empty(null); });
+})();
 </script>"""
 
 IG_JS = """<script>
