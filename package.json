@@ -5,6 +5,7 @@
   "description": "One installable app over Farmhouse Getaways, Mini Barn Market and Farmstand.TV.",
   "scripts": {
     "build": "python3 tools/build.py",
+    "test": "node --test netlify/functions/_lib/*.test.mjs",
     "vapid": "web-push generate-vapid-keys"
   },
   "dependencies": {

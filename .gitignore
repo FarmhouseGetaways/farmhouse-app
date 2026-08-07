@@ -1,0 +1,8 @@
+# tools/build.py leaves these behind. They are machine-specific and would
+# churn on every commit.
+__pycache__/
+*.pyc
+
+node_modules/
+.netlify/
+.DS_Store

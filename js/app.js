@@ -148,3 +148,65 @@
     }
   }
 })();
+
+/* ---- the email signup on More -------------------------------------------
+   Posts to /.netlify/functions/subscribe and repaints in place. It must not
+   navigate: this is an installed app, and bouncing out to a thanks page is
+   how one stops feeling like an app.
+
+   The <form> is real and the submit is intercepted, so Return on the phone
+   keyboard works and the field gets the browser's own validation styling. */
+(function () {
+  var form = document.getElementById("signup");
+  if (!form) return;
+
+  var said = document.getElementById("signup-said");
+  var btn = form.querySelector("button[type=submit]");
+
+  function say(msg, bad) {
+    said.textContent = msg;
+    said.classList.toggle("bad", !!bad);
+  }
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    var email = form.elements.email.value.trim();
+    if (!email) { say("Pop your email address in first.", true); return; }
+
+    /* Checked before the fetch rather than after it fails, because out here
+       offline is the normal case, not the exception — and "you are offline"
+       is worth saying, where "that did not work" would just look broken. */
+    if (navigator.onLine === false) {
+      say("You are offline. This one needs a signal — try again when you have one.", true);
+      return;
+    }
+
+    btn.disabled = true;
+    say("Sending\u2026");
+
+    try {
+      var res = await fetch("/.netlify/functions/subscribe", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: email,
+          firstName: form.elements.firstName.value.trim(),
+          company: form.elements.company.value
+        })
+      });
+      var out = await res.json().catch(function () { return {}; });
+
+      if (res.ok && out.ok) {
+        form.dataset.done = "1";
+        say(out.message || "Done. The map is on its way to your inbox.");
+      } else {
+        say(out.message || "That did not work. Try again in a moment.", true);
+      }
+    } catch (err) {
+      say("That did not work. Try again in a moment.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+})();

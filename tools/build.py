@@ -435,6 +435,27 @@ def page_more():
   </section>
 
   <section class="sec">
+    <p class="eyebrow">The list</p>
+    <div class="card card-pad">
+      <h2 class="mid">Get the Ramona Farmstand Map.</h2>
+      <p>30+ working stands, hand-drawn by us. One or two emails a month &mdash;
+        what is ripe, what is new in the barn, and word when good weekends open
+        up. Unsubscribe in a click, and we never sell your address.</p>
+      <form class="signup" id="signup" novalidate>
+        <p class="hp"><label>Leave this empty <input name="company" tabindex="-1" autocomplete="off"></label></p>
+        <div class="signup-row">
+          <input name="firstName" type="text" autocomplete="given-name" placeholder="First name (optional)">
+        </div>
+        <div class="signup-row">
+          <input name="email" type="email" required autocomplete="email" placeholder="you@example.com" enterkeyhint="go">
+        </div>
+        <button class="btn btn-go" type="submit">Send me the map</button>
+        <p class="signup-said" id="signup-said" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <section class="sec">
     <div class="card card-pad">
       <h2 class="mid">About this app</h2>
       <p>Made in Ramona by Cory &amp; Carissa. It keeps the map, the stands and
@@ -771,6 +792,68 @@ APP_JS = """/* The app shell: service worker, offline state, install prompt. */
       });
     }
   }
+})();
+
+/* ---- the email signup on More -------------------------------------------
+   Posts to /.netlify/functions/subscribe and repaints in place. It must not
+   navigate: this is an installed app, and bouncing out to a thanks page is
+   how one stops feeling like an app.
+
+   The <form> is real and the submit is intercepted, so Return on the phone
+   keyboard works and the field gets the browser's own validation styling. */
+(function () {
+  var form = document.getElementById("signup");
+  if (!form) return;
+
+  var said = document.getElementById("signup-said");
+  var btn = form.querySelector("button[type=submit]");
+
+  function say(msg, bad) {
+    said.textContent = msg;
+    said.classList.toggle("bad", !!bad);
+  }
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    var email = form.elements.email.value.trim();
+    if (!email) { say("Pop your email address in first.", true); return; }
+
+    /* Checked before the fetch rather than after it fails, because out here
+       offline is the normal case, not the exception — and "you are offline"
+       is worth saying, where "that did not work" would just look broken. */
+    if (navigator.onLine === false) {
+      say("You are offline. This one needs a signal — try again when you have one.", true);
+      return;
+    }
+
+    btn.disabled = true;
+    say("Sending\\u2026");
+
+    try {
+      var res = await fetch("/.netlify/functions/subscribe", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: email,
+          firstName: form.elements.firstName.value.trim(),
+          company: form.elements.company.value
+        })
+      });
+      var out = await res.json().catch(function () { return {}; });
+
+      if (res.ok && out.ok) {
+        form.dataset.done = "1";
+        say(out.message || "Done. The map is on its way to your inbox.");
+      } else {
+        say(out.message || "That did not work. Try again in a moment.", true);
+      }
+    } catch (err) {
+      say("That did not work. Try again in a moment.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 })();
 """
 

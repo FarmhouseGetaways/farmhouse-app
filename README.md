@@ -37,6 +37,24 @@ look:
   they are exactly what the service worker precaches. Change one and change
   both.
 
+## The email signup
+
+The More screen posts to `netlify/functions/subscribe.mjs`, which adds the
+address to EmailOctopus. Two things about it are deliberate:
+
+* **It does not navigate.** The three websites use plain Netlify forms that
+  post and land on a thanks page. This is an installed app, and bouncing out to
+  a confirmation screen is how one stops feeling like an app — so the form is
+  intercepted and repaints in place.
+* **`_lib/emailoctopus.mjs` is a copy** of the same file in the
+  farmhousegetaways repo. They are separate Netlify sites and neither repo
+  wants an npm package to share one module, so the two copies have to be kept
+  in step by hand. `npm test` guards the part that matters — tags reach the API
+  as an object map, and an array is accepted, silently ignored, and leaves
+  every contact untagged.
+
+      npm test    # plain node --test, no install needed
+
 ## Not built yet
 
 * **Push notifications for visitors** — the reason to install it. Needs VAPID

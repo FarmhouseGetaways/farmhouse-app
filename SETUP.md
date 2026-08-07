@@ -55,7 +55,24 @@ The account must be Business or Creator — @minibarnmarket already is.
 `instagram-refresh` rolls it every Monday and parks the fresh one in Netlify
 Blobs, so it should never expire again.
 
-## 5. Check it
+## 5. The email list
+
+The More screen has a signup that adds people to EmailOctopus. Same one list
+the three websites feed — one list for all brands, told apart by tags, because
+EmailOctopus bills per contact per list.
+
+    EMAILOCTOPUS_API_KEY  = the key from EmailOctopus → Integrations & API
+    EMAILOCTOPUS_LIST_ID  = the list's id
+
+Both are the same values the farmhousegetaways site uses. Get them there once
+and paste them here too. Signups from the app are tagged `app` and
+`source-app-more` — no brand tag, because the app is all three brands at once
+and picking one would be a guess.
+
+Until these are set the form politely says signups are not switched on yet, and
+the lost address is printed in the function log.
+
+## 6. Check it
 
 Open `/admin`, sign in. The "Is it switched on?" list turns green as each piece
 lands. Then install the app on your own phone, turn notifications on, and use

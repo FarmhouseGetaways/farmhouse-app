@@ -1,0 +1,136 @@
+/**
+ * The EmailOctopus client. One list, tagged by brand.
+ *
+ * ⚠ THIS FILE IS A COPY. The original lives in the farmhousegetaways repo at
+ * netlify/functions/_lib/emailoctopus.mjs and the two must stay in step. They
+ * are separate Netlify sites, so there is no shared package to import without
+ * introducing npm to two repos that deliberately have none. Fix a bug here and
+ * fix it there.
+ *
+ * THE SHAPE OF THE THING
+ * Every signup across Farmhouse Getaways, Mini Barn Market and Farmstand.TV —
+ * and this app, which is all three — lands on a single EmailOctopus list and is
+ * told apart by tags. EmailOctopus bills per contact per list, so three lists
+ * would charge twice for anyone who signs up on two brands.
+ *
+ * NO KEY LIVES IN THIS REPO.
+ * EMAILOCTOPUS_API_KEY and EMAILOCTOPUS_LIST_ID are Netlify environment
+ * variables, exactly as SETUP.md requires of every other credential here.
+ */
+
+const API = "https://api.emailoctopus.com";
+
+export const apiKey = () => (process.env.EMAILOCTOPUS_API_KEY || "").trim();
+export const listId = () => (process.env.EMAILOCTOPUS_LIST_ID || "").trim();
+
+/** Is the integration switched on? Used by the check endpoint and the trigger. */
+export function configured() {
+  const missing = [];
+  if (!apiKey()) missing.push("EMAILOCTOPUS_API_KEY");
+  if (!listId()) missing.push("EMAILOCTOPUS_LIST_ID");
+  return { ok: missing.length === 0, missing };
+}
+
+async function call(method, path, body) {
+  const res = await fetch(API + path, {
+    method,
+    headers: {
+      authorization: "Bearer " + apiKey(),
+      "content-type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  // EmailOctopus returns a JSON problem document on errors, but a gateway
+  // hiccup can still hand back HTML. Never let a parse failure masquerade as
+  // an API error — the two want completely different responses from us.
+  let payload = null;
+  const text = await res.text();
+  if (text) {
+    try { payload = JSON.parse(text); } catch { payload = { raw: text.slice(0, 300) }; }
+  }
+  return { status: res.status, ok: res.ok, payload };
+}
+
+/** Every list on the account, so setup can be told the real IDs. */
+export async function getLists() {
+  return call("GET", "/lists");
+}
+
+/**
+ * Add or update one contact.
+ *
+ * PUT, NOT POST — AND THE TAG FORMAT DIFFERS BETWEEN THEM.
+ * POST /contacts is create-only: a second signup from the same address returns
+ * 409 and the tags on that second submission are lost. PUT is an upsert, so
+ * someone who signed up for the map in March and again from the barn page in
+ * August ends up with both source tags instead of an error in the log.
+ *
+ * The catch is that the two endpoints do not take tags the same way. POST
+ * wants an array — ["map"] — and PUT wants an object keyed by tag name with a
+ * boolean value, where `false` REMOVES a tag:
+ *
+ *     "tags": { "brand-farmhouse-getaways": true }
+ *
+ * Hand PUT an array and the request still succeeds. It simply applies no tags
+ * at all, silently, and every contact arrives untagged — which would not look
+ * broken until the first time someone tried to send to one brand and reached
+ * everybody. Hence buildTags() below, and hence this comment.
+ */
+export async function upsertContact({ email, firstName, tags = [], status = "subscribed" }) {
+  const address = String(email || "").trim();
+  if (!address) return { ok: false, status: 0, payload: { skipped: "no email address" } };
+
+  const body = { email_address: address, status };
+
+  // FirstName is one of the two fields EmailOctopus creates on every list by
+  // default, so it is safe to send without anyone having to add it first.
+  // Anything else we know about a signup goes into tags instead of custom
+  // fields, for exactly that reason — a tag needs no setup, a field does.
+  if (firstName) body.fields = { FirstName: firstName };
+
+  const tagMap = buildTags(tags);
+  if (Object.keys(tagMap).length) body.tags = tagMap;
+
+  const res = await call("PUT", `/lists/${listId()}/contacts`, body);
+  if (res.ok) return res;
+
+  // A rejected tag or field must never cost us the signup. If the rich version
+  // is refused, put the bare address on the list and report the downgrade —
+  // an untagged subscriber is a small problem, a lost one is permanent.
+  const worthRetrying = (res.status === 400 || res.status === 422) && (body.tags || body.fields);
+  if (worthRetrying) {
+    const bare = await call("PUT", `/lists/${listId()}/contacts`, { email_address: address, status });
+    if (bare.ok) return { ...bare, degraded: describe(res) };
+  }
+  return res;
+}
+
+/**
+ * Tag names, cleaned up and turned into the object map PUT expects.
+ *
+ * Lowercase and hyphenated so that "Red Barn Ranch" typed into a form and
+ * "red-barn-ranch" written in code cannot become two different tags that mean
+ * the same thing and split the audience in half.
+ */
+export function buildTags(tags) {
+  const out = {};
+  for (const raw of tags) {
+    if (!raw) continue;
+    const tag = String(raw)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 50);
+    if (tag) out[tag] = true;
+  }
+  return out;
+}
+
+/** A one-line, log-safe summary of a failed call. Never includes the API key. */
+export function describe(res) {
+  const p = res.payload || {};
+  const detail = p.title || p.detail || p.message || (p.raw ? p.raw : "");
+  return `emailoctopus ${res.status}${detail ? " — " + detail : ""}`;
+}

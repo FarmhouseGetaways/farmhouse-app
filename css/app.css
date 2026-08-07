@@ -441,3 +441,26 @@ body.is-offline .offline { display: block; }
 body.can-install .install { display: inline-flex; }
 /* Once it is installed, stop asking. */
 @media (display-mode: standalone) { #install-card { display: none; } }
+
+/* ---------- the email signup, on More ----------
+   The app's only text input. It is deliberately not styled like the websites'
+   forms: those sit on cream, this sits on the dark shell, and a white field
+   here would glow like a hole in the page. */
+.signup { display: grid; gap: .7rem; margin-top: 1rem; }
+.signup input[type="email"], .signup input[type="text"] {
+  font-family: var(--body); font-size: 1rem; width: 100%;
+  padding: .9rem 1.05rem; border-radius: var(--radius);
+  background: var(--night); border: 1px solid var(--line); color: var(--cream);
+  /* iOS zooms the whole page in when a focused field is under 16px. 1rem is
+     16px here, and it must stay that way — the zoom does not undo itself, and
+     it leaves the fixed tab bar stranded off-screen. */
+}
+.signup input::placeholder { color: var(--mute-2); }
+.signup input:focus { outline: none; border-color: var(--accent); }
+.signup .btn { width: 100%; }
+/* The honeypot. Off-screen rather than display:none, because some bots skip
+   fields they can tell are hidden. */
+.signup .hp { position: absolute; left: -9999px; }
+.signup-said { font-size: .82rem; color: var(--mute); margin: .2rem 0 0; min-height: 1.2em; }
+.signup-said.bad { color: var(--mbm-red); }
+.signup[data-done="1"] .signup-row, .signup[data-done="1"] .btn { display: none; }
