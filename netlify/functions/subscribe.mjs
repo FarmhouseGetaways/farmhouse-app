@@ -22,7 +22,18 @@
  * Netlify Blobs wired up for the push store and a counter keyed by IP is the
  * obvious next move.
  */
-import { configured, upsertContact, describe } from "./_lib/emailoctopus.mjs";
+import { configured, upsertContact, queueAutomation, describe } from "./_lib/emailoctopus.mjs";
+
+/**
+ * Which brand this signup counts as.
+ *
+ * The app is all three brands at once, so there is no honest answer from the
+ * code alone — but every contact needs exactly one brand tag or the
+ * segmentation has a hole in it, and "no tag" would quietly exclude these
+ * people from every branded send. Farmhouse Getaways is the default because
+ * that is whose app it is; override it per-site in Netlify.
+ */
+const brand = () => (process.env.EMAILOCTOPUS_BRAND || "farmhousegetaways").trim();
 
 const json = (obj, status = 200) =>
   Response.json(obj, { status, headers: { "Cache-Control": "no-store" } });
@@ -72,9 +83,9 @@ export default async (req) => {
     const res = await upsertContact({
       email,
       firstName,
-      // No brand tag: the app is all three brands at once, so claiming one
-      // would be a guess. "app" is the honest answer to where they came from.
-      tags: ["app", "source-app-more"],
+      // `app` records where they came from; the brand tag keeps them inside
+      // the same segmentation the three websites use.
+      tags: [brand(), "app", "source-app-more"],
       status: "subscribed",
     });
 
@@ -84,7 +95,15 @@ export default async (req) => {
     }
 
     if (res.degraded) console.warn(`[emailoctopus] tags dropped for ${email}: ${res.degraded}`);
-    console.log(`[emailoctopus] subscribed ${email} [app]`);
+    console.log(`[emailoctopus] subscribed ${email} [${brand()}, app]`);
+
+    // The welcome email that carries the map. Separate from the upsert on
+    // purpose: a broken automation id must cost the welcome, never the
+    // subscription. The message below promises the map either way, and if this
+    // fails the log says so loudly enough to send it by hand.
+    const auto = await queueAutomation(email, process.env.EMAILOCTOPUS_AUTOMATION_ID);
+    if (!auto.ok) console.error(`[emailoctopus] automation did not start for ${email}: ${describe(auto)}`);
+
     return json({ ok: true, message: "Done. The map is on its way to your inbox." });
   } catch (err) {
     console.error(`[emailoctopus] threw for ${email}: ${String(err?.message || err)}`);

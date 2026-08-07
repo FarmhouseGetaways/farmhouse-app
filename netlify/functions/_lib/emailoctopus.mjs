@@ -18,6 +18,8 @@
  * variables, exactly as SETUP.md requires of every other credential here.
  */
 
+import { createHash } from "node:crypto";
+
 const API = "https://api.emailoctopus.com";
 
 export const apiKey = () => (process.env.EMAILOCTOPUS_API_KEY || "").trim();
@@ -70,7 +72,7 @@ export async function getLists() {
  * wants an array — ["map"] — and PUT wants an object keyed by tag name with a
  * boolean value, where `false` REMOVES a tag:
  *
- *     "tags": { "brand-farmhouse-getaways": true }
+ *     "tags": { "farmhousegetaways": true }
  *
  * Hand PUT an array and the request still succeeds. It simply applies no tags
  * at all, silently, and every contact arrives untagged — which would not look
@@ -126,6 +128,44 @@ export function buildTags(tags) {
     if (tag) out[tag] = true;
   }
   return out;
+}
+
+/**
+ * Start an automation for one contact — the auto-responder that carries the map.
+ *
+ * WHY THIS EXISTS WHEN EMAILOCTOPUS CAN ALREADY TRIGGER ON "JOINED THE LIST"
+ * One list serves three brands. A list-join trigger fires for all of them, so
+ * a Mini Barn Market signup would get the Farmhouse welcome. EmailOctopus can
+ * narrow an automation by tag, and if yours does, leave EMAILOCTOPUS_AUTOMATION_ID
+ * unset and let it — that path needs no code and cannot drift.
+ *
+ * Set the variable and the site names its own automation explicitly instead,
+ * which is the only way to be certain the right brand's email goes out.
+ *
+ * THE API CANNOT BUILD THE AUTOMATION, ONLY START IT. v2 exposes lists,
+ * contacts, fields and tags; campaigns are read-only and automations have
+ * exactly this one write endpoint. The email itself has to be created in the
+ * EmailOctopus UI — see EMAIL.md, which has the copy ready to paste.
+ *
+ * contact_id is the MD5 of the lowercased address, not the id from the upsert
+ * response, so this needs no extra round trip and works for a contact that
+ * already existed.
+ */
+export async function queueAutomation(email, automationId) {
+  const id = String(automationId || "").trim();
+  if (!id) return { ok: true, skipped: "no automation configured" };
+
+  const contactId = createHash("md5")
+    .update(String(email).trim().toLowerCase())
+    .digest("hex");
+
+  const res = await call("POST", `/automations/${id}/queue`, { contact_id: contactId });
+
+  // 409 means the contact is already in this automation. That is the correct
+  // outcome for a second signup from the same address, not a failure — and it
+  // is exactly what stops someone who signs up twice getting the map twice.
+  if (res.status === 409) return { ok: true, alreadyQueued: true };
+  return res;
 }
 
 /** A one-line, log-safe summary of a failed call. Never includes the API key. */

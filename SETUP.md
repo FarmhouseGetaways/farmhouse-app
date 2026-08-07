@@ -61,13 +61,24 @@ The More screen has a signup that adds people to EmailOctopus. Same one list
 the three websites feed — one list for all brands, told apart by tags, because
 EmailOctopus bills per contact per list.
 
-    EMAILOCTOPUS_API_KEY  = the key from EmailOctopus → Integrations & API
-    EMAILOCTOPUS_LIST_ID  = the list's id
+    EMAILOCTOPUS_API_KEY       = the key from EmailOctopus → Integrations & API
+    EMAILOCTOPUS_LIST_ID       = the list's id
+    EMAILOCTOPUS_BRAND         = farmhousegetaways        (optional, this is the default)
+    EMAILOCTOPUS_AUTOMATION_ID = the welcome automation's id   (optional)
 
-Both are the same values the farmhousegetaways site uses. Get them there once
-and paste them here too. Signups from the app are tagged `app` and
-`source-app-more` — no brand tag, because the app is all three brands at once
-and picking one would be a guess.
+The first two are the same values the farmhousegetaways site uses. Get them
+there once and paste them here too.
+
+Signups from the app are tagged `farmhousegetaways`, `app` and
+`source-app-more`. The app is really all three brands at once, but a contact
+with no brand tag would be quietly left out of every branded send, so it
+carries one — change `EMAILOCTOPUS_BRAND` if you would rather it counted as
+`minibarnmarket` or `farmstandtv`.
+
+`EMAILOCTOPUS_AUTOMATION_ID` starts the welcome email that carries the map.
+Leave it unset if the automation already triggers on joining the list; setting
+both would send the welcome twice. The three emails and how to build them are
+in the farmhousegetaways repo under `emails/`.
 
 Until these are set the form politely says signups are not switched on yet, and
 the lost address is printed in the function log.

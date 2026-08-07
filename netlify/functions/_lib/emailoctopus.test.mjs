@@ -9,7 +9,7 @@
  */
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { buildTags, upsertContact } from "./emailoctopus.mjs";
+import { buildTags, upsertContact, queueAutomation } from "./emailoctopus.mjs";
 
 const realFetch = globalThis.fetch;
 let calls = [];
@@ -18,9 +18,12 @@ let calls = [];
 function stubFetch(reply = { status: 200, body: { id: "abc" } }) {
   globalThis.fetch = async (url, opts) => {
     calls.push({ url, method: opts.method, body: JSON.parse(opts.body), headers: opts.headers });
-    return new Response(JSON.stringify(reply.body), {
+    // 204 must have a null body — the Response constructor throws otherwise,
+    // and the automation endpoint answers 204 on success.
+    const noBody = reply.status === 204 || reply.status === 304;
+    return new Response(noBody ? null : JSON.stringify(reply.body), {
       status: reply.status,
-      headers: { "content-type": "application/json" },
+      headers: noBody ? {} : { "content-type": "application/json" },
     });
   };
 }
@@ -35,9 +38,17 @@ afterEach(() => {
 });
 
 test("tags are an OBJECT MAP on PUT, not an array", () => {
-  const tags = buildTags(["farmhouse-getaways", "source-footer-home"]);
+  const tags = buildTags(["farmhousegetaways", "source-footer-home"]);
   assert.equal(Array.isArray(tags), false, "an array here silently applies no tags at all");
-  assert.deepEqual(tags, { "farmhouse-getaways": true, "source-footer-home": true });
+  assert.deepEqual(tags, { farmhousegetaways: true, "source-footer-home": true });
+});
+
+test("the three brand tags survive normalisation exactly as written", () => {
+  // These three are the segmentation. If normalisation ever mangled one, every
+  // send to that brand would quietly reach nobody.
+  for (const t of ["farmhousegetaways", "minibarnmarket", "farmstandtv"]) {
+    assert.deepEqual(buildTags([t]), { [t]: true }, `${t} must pass through untouched`);
+  }
 });
 
 test("tag names are normalised so one audience cannot become two", () => {
@@ -93,4 +104,30 @@ test("an empty address is refused without calling the API", async () => {
   const res = await upsertContact({ email: "   " });
   assert.equal(res.ok, false);
   assert.equal(calls.length, 0);
+});
+
+test("the automation is started with an MD5 of the lowercased address", async () => {
+  stubFetch({ status: 204, body: {} });
+  await queueAutomation("Dana@Example.COM ", "auto-9");
+
+  assert.equal(calls[0].method, "POST");
+  assert.equal(calls[0].url, "https://api.emailoctopus.com/automations/auto-9/queue");
+  // md5("dana@example.com") — lowercased and trimmed first, or EmailOctopus
+  // would look up a contact that does not exist and the welcome never sends.
+  assert.deepEqual(calls[0].body, { contact_id: "e556d839bbda3d423c5b09096613f2d7" });
+});
+
+test("no automation configured means no call, and that is a success", async () => {
+  stubFetch();
+  const res = await queueAutomation("a@example.com", "");
+  assert.equal(res.ok, true);
+  assert.ok(res.skipped);
+  assert.equal(calls.length, 0, "an unset automation id is a choice, not an error");
+});
+
+test("a contact already in the automation is not an error", async () => {
+  stubFetch({ status: 409, body: { title: "Conflict" } });
+  const res = await queueAutomation("a@example.com", "auto-9");
+  assert.equal(res.ok, true, "a second signup must not resend the welcome, nor log a failure");
+  assert.equal(res.alreadyQueued, true);
 });
