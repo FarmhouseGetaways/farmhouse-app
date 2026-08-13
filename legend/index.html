@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Legend Dzbinski — Across the World and Beyond</title>
+<meta name="description" content="Every place Legend has been: pins on a world map, a country tracker, a fifty-state board, continents, and everything beyond Earth.">
+<meta name="theme-color" content="#05070f">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Legend Dzbinski — Across the World and Beyond">
+<meta property="og:description" content="A living map of everywhere Legend has been.">
+<meta property="og:url" content="https://legenddzbinski.com/">
+
+<link rel="icon" href="images/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="images/favicon.svg">
+
+<link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
+<!-- Leaflet is vendored in vendor/leaflet rather than pulled from a CDN: one
+     less service that can be down, blocked or slow, and the page still boots
+     with no network at all. -->
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="css/legend.css">
+</head>
+
+<body>
+
+<a class="skip" href="#map-section">Skip to the map</a>
+
+<header class="head">
+  <div class="head__in">
+    <a class="brand" href="#top">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__text">
+        <strong>LEGEND</strong>
+        <em>Dzbinski</em>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#map-section">Map</a>
+      <a href="#world">World</a>
+      <a href="#states">States</a>
+      <a href="#beyond-section">Beyond</a>
+      <a href="#timeline-section">Timeline</a>
+      <a href="#data">Data</a>
+    </nav>
+    <button type="button" id="add" class="btn btn--go">+ Add a place</button>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ================= HERO ================= -->
+  <section class="hero" id="hero">
+    <div class="hero__glow" aria-hidden="true"></div>
+    <div class="hero__in">
+      <p class="hero__kicker">The travels of</p>
+      <h1 class="hero__name">Legend Dzbinski</h1>
+      <p class="hero__tag">Across the world <span>and beyond</span></p>
+
+      <div class="stats">
+        <div class="stat">
+          <span class="stat__n" id="stat-places" data-value="0">0</span>
+          <span class="stat__label">Places</span>
+          <span class="stat__sub" id="stat-places-sub">pins on the map</span>
+        </div>
+        <div class="stat stat--bar" data-bar="countries">
+          <span class="stat__n" id="stat-countries" data-value="0">0</span>
+          <span class="stat__label">Countries</span>
+          <span class="stat__sub" id="stat-countries-sub"></span>
+        </div>
+        <div class="stat stat--bar" data-bar="states">
+          <span class="stat__n" id="stat-states" data-value="0">0</span>
+          <span class="stat__label">US States</span>
+          <span class="stat__sub" id="stat-states-sub"></span>
+        </div>
+        <div class="stat stat--bar" data-bar="continents">
+          <span class="stat__n" id="stat-continents" data-value="0">0</span>
+          <span class="stat__label">Continents</span>
+          <span class="stat__sub" id="stat-continents-sub"></span>
+        </div>
+        <div class="stat">
+          <span class="stat__n" id="stat-miles" data-value="0">0</span>
+          <span class="stat__label">Miles</span>
+          <span class="stat__sub" id="stat-miles-sub"></span>
+        </div>
+        <div class="stat stat--bar" data-bar="beyond">
+          <span class="stat__n" id="stat-beyond" data-value="0">0</span>
+          <span class="stat__label">Beyond Earth</span>
+          <span class="stat__sub" id="stat-beyond-sub"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MAP ================= -->
+  <section id="map-section" class="section section--map">
+    <div class="section__head">
+      <h2>Everywhere he's been</h2>
+      <div class="controls">
+        <select id="year" class="ctl" aria-label="Filter by year"></select>
+        <button type="button" id="toggle-path" class="ctl">Route on</button>
+        <span class="ctl-group" role="group" aria-label="Map style">
+          <button type="button" class="ctl is-on" data-style="night">Night</button>
+          <button type="button" class="ctl" data-style="satellite">Satellite</button>
+          <button type="button" class="ctl" data-style="terrain">Terrain</button>
+        </span>
+      </div>
+    </div>
+
+    <div class="mapwrap">
+      <div id="map" aria-label="World map of visited places"></div>
+      <div class="maplegend">
+        <span><i class="dot dot--visit"></i> Visited</span>
+        <span><i class="dot dot--home"></i> Home base</span>
+        <span><i class="dot dot--beyond"></i> Beyond Earth</span>
+        <span><i class="dot dot--fav"></i> Favourite</span>
+      </div>
+    </div>
+    <p class="hint">Tap a pin for the story. The dashed line follows the trips in the order they happened.</p>
+  </section>
+
+  <!-- ================= CONTINENTS + COUNTRIES ================= -->
+  <section id="world" class="section">
+    <div class="section__head">
+      <h2>The world</h2>
+      <p class="section__sub">Seven continents. Every country on Earth, and the ones already collected.</p>
+    </div>
+
+    <div id="continents" class="continents"></div>
+
+    <div class="filters">
+      <input type="search" id="country-search" class="ctl ctl--input" placeholder="Find a country…" aria-label="Search countries">
+      <label class="check"><input type="checkbox" id="country-visited"> Visited only</label>
+    </div>
+
+    <div id="countries" class="countries"></div>
+    <p class="hint">Green means been there. Tap a country you've been to and the map flies to it — tap one you haven't and it starts a new entry.</p>
+  </section>
+
+  <!-- ================= STATES ================= -->
+  <section id="states" class="section">
+    <div class="section__head">
+      <h2>The fifty states</h2>
+      <p class="section__sub">One square per state — Rhode Island counts as much as Texas.</p>
+    </div>
+    <div id="stategrid" class="stategrid"></div>
+    <p class="hint" id="states-left"></p>
+  </section>
+
+  <!-- ================= BEYOND ================= -->
+  <section id="beyond-section" class="section section--beyond">
+    <div class="section__head">
+      <h2>And beyond</h2>
+      <p class="section__sub">The places that aren't on any continent.</p>
+    </div>
+    <div id="beyond" class="realms"></div>
+  </section>
+
+  <!-- ================= TIMELINE ================= -->
+  <section id="timeline-section" class="section">
+    <div class="section__head">
+      <h2>The timeline</h2>
+      <p class="section__sub">Newest first.</p>
+    </div>
+    <div id="timeline" class="tl"></div>
+  </section>
+
+  <!-- ================= DATA ================= -->
+  <section id="data" class="section section--data">
+    <div class="section__head">
+      <h2>The list</h2>
+      <p class="section__sub">Add, edit and delete places here. Everything is kept in this
+        browser until you publish it.</p>
+    </div>
+
+    <div class="notice" id="dirty" hidden>
+      <strong>Unpublished changes.</strong> These places live only in this browser.
+      Press <em>Download places.json</em> and commit the file over
+      <code>legend/data/places.json</code> to put them on the live site for everyone.
+    </div>
+
+    <div class="dataacts">
+      <button type="button" id="add-2" class="btn btn--go">+ Add a place</button>
+      <button type="button" id="download" class="btn">Download places.json</button>
+      <button type="button" id="copy" class="btn">Copy JSON</button>
+      <label class="btn btn--file">Import JSON<input type="file" id="import" accept="application/json,.json" hidden></label>
+      <button type="button" id="revert" class="btn btn--quiet">Revert to published</button>
+    </div>
+
+    <div id="managelist" class="rows"></div>
+
+    <details class="raw">
+      <summary>Raw JSON</summary>
+      <textarea id="json" class="json" readonly spellcheck="false" aria-label="Places as JSON"></textarea>
+    </details>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p>legenddzbinski.com — a map that grows.</p>
+  <p class="foot__small">Map data © OpenStreetMap contributors, CARTO, Esri.</p>
+</footer>
+
+<!-- ================= ADD / EDIT DIALOG ================= -->
+<div class="dialog" id="dialog" hidden>
+  <div class="dialog__box" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <div class="dialog__head">
+      <h2 id="dialog-title">Add a place</h2>
+      <button type="button" id="dialog-close" class="x" aria-label="Close">×</button>
+    </div>
+
+    <form id="place-form" class="form">
+      <label class="field">
+        <span class="field__label">Place</span>
+        <input type="text" id="f-name" name="name" required placeholder="Kyoto, Japan" autocomplete="off">
+      </label>
+
+      <fieldset class="seg">
+        <legend class="field__label">Kind</legend>
+        <label><input type="radio" name="kind" value="visit" checked> Visit</label>
+        <label><input type="radio" name="kind" value="home"> Home base</label>
+        <label><input type="radio" name="kind" value="beyond"> Beyond Earth</label>
+      </fieldset>
+
+      <div id="f-earth">
+        <label class="field">
+          <span class="field__label">Country</span>
+          <select id="f-country"></select>
+        </label>
+        <label class="field" id="f-state-wrap" hidden>
+          <span class="field__label">State</span>
+          <select id="f-state"></select>
+        </label>
+      </div>
+
+      <div id="f-beyond" hidden>
+        <label class="field">
+          <span class="field__label">Realm</span>
+          <select id="f-realm"></select>
+        </label>
+      </div>
+
+      <label class="field">
+        <span class="field__label">Date <em>optional</em></span>
+        <input type="date" id="f-date">
+      </label>
+
+      <div class="field">
+        <span class="field__label">Coordinates</span>
+        <div class="coords">
+          <input type="number" id="f-lat" step="0.0001" min="-90" max="90" placeholder="Latitude" aria-label="Latitude">
+          <input type="number" id="f-lng" step="0.0001" min="-180" max="180" placeholder="Longitude" aria-label="Longitude">
+        </div>
+        <div class="coords__acts">
+          <button type="button" id="f-pick" class="mini">Pick on map</button>
+          <button type="button" id="f-centre" class="mini">Use country centre</button>
+        </div>
+      </div>
+
+      <label class="field">
+        <span class="field__label">Notes <em>optional</em></span>
+        <textarea id="f-notes" rows="3" placeholder="What happened there."></textarea>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Photo URL <em>optional</em></span>
+        <input type="url" id="f-photo" placeholder="https://…">
+      </label>
+
+      <label class="check"><input type="checkbox" id="f-fav"> Mark as a favourite</label>
+
+      <div class="form__acts">
+        <button type="submit" class="btn btn--go">Save place</button>
+        <button type="button" id="f-cancel" class="btn btn--quiet">Cancel</button>
+        <button type="button" id="f-delete" class="btn btn--danger" hidden>Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/map.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

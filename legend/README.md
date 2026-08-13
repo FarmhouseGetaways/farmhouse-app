@@ -1,0 +1,99 @@
+# Legend — across the world and beyond
+
+A tracking site for everywhere Legend Dzbinski has been: pins on a world map,
+a country tracker, a fifty-state board, continents, and a scoreboard for the
+places that aren't on any continent at all.
+
+It is meant to live at **legenddzbinski.com**.
+
+It is plain HTML, CSS and JavaScript. No build step, no framework, no
+database, no login. Open `index.html` through any web server and it runs.
+
+    cd legend
+    python3 -m http.server 8000
+    # then open http://localhost:8000
+
+(Opening the file directly with `file://` mostly works, but the browser blocks
+the fetch of `data/places.json`, so you get the single fallback pin instead of
+the published list.)
+
+## Adding places
+
+Press **+ Add a place**. Give it a name, a country (and a state, if it's in
+the US), optionally a date, and coordinates — either type them, press *Use
+country centre* for a rough drop, or press *Pick on map* and click the exact
+spot. Dates matter more than they look: the dashed route line and the mileage
+total are both built from the places that have one, in the order they
+happened.
+
+Mark something **Beyond Earth** instead of a country and it lands in the
+*And beyond* section under one of four realms: the sky, under the sea,
+summits, and space.
+
+## Publishing what you added
+
+Everything you add is saved **in your browser only**. That is what makes the
+site free and serverless, and it is also the one thing to understand about it:
+until you publish, nobody else can see your new pins, and clearing your
+browser data would lose them.
+
+To publish:
+
+1. Scroll to **The list** at the bottom.
+2. Press **Download places.json**.
+3. Replace `legend/data/places.json` in this repo with the file you just
+   downloaded, and commit it.
+
+The next deploy shows those places to everyone. An amber banner sits in that
+section the whole time you have unpublished changes, so it is hard to forget.
+
+**Import JSON** goes the other way — load a `places.json` back in, which is
+how you move the list to a second computer or phone. **Revert to published**
+throws away the local copy and goes back to whatever is committed.
+
+## Deploying
+
+The folder is a complete static site, so it deploys as its own Netlify site,
+separate from the farmhouse app in the repo root:
+
+1. Netlify → *Add new site* → *Import an existing project* → this repo.
+2. **Base directory:** `legend`
+3. **Build command:** leave empty
+4. **Publish directory:** `legend`
+5. Deploy, then *Domain management* → add `legenddzbinski.com` and follow
+   Netlify's DNS instructions at the registrar.
+
+`legend/netlify.toml` carries the headers. The important one is that
+`data/places.json`, the CSS and the JS are all served `must-revalidate`: this
+site gets edited often, and nobody should have to hard-refresh to see a new
+pin.
+
+Dropping the `legend` folder onto Netlify by hand works too — same result,
+minus the automatic redeploy when the repo changes.
+
+## What is in here
+
+    index.html          the whole page
+    css/legend.css      all of the styling
+    js/data.js          countries, continents, US state grid — static reference data
+    js/store.js         the list: load, save, export, and every derived number
+    js/map.js           Leaflet setup, custom pins, the curved route line
+    js/app.js           rendering, the scoreboards, the add/edit form
+    data/places.json    the published list of places
+    images/favicon.svg  the mark
+
+The only things fetched from anyone else are Leaflet (unpkg) and the map
+tiles (CARTO for the night map, Esri for satellite and terrain). All are
+keyless and free at this size; past a few thousand views a month, move the
+tiles to a keyed provider.
+
+## Counting rules
+
+* **Countries** counts sovereign countries only, out of the 195 in
+  `js/data.js`. Territories — Puerto Rico, Greenland, Hong Kong, Antarctica
+  and friends — are visitable and appear in the grid in italics, but they
+  don't inflate the score.
+* **States** counts the fifty. DC is tracked and shown on the board, but the
+  denominator stays 50.
+* **Miles** are great-circle hops between consecutive dated stops. A place
+  with no date isn't in a sequence, so it isn't counted rather than guessed.

@@ -1,0 +1,47 @@
+# legenddzbinski.com — its own Netlify site.
+#
+# This folder is a complete static site. Point a *second* Netlify site at this
+# repo with the base directory set to `legend`, and Netlify reads this file
+# instead of the one in the repo root (which belongs to the farmhouse app).
+#
+#   Base directory:     legend
+#   Build command:      (leave empty — there is no build step)
+#   Publish directory:  legend
+#
+# Nothing here is generated: the HTML, CSS and JS in this folder are the site.
+
+[build]
+  publish = "."
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+
+# Fingerprint-free assets that change with the site, so they are revalidated
+# rather than pinned for a year — a travel map gets edited often and nobody
+# should have to hard-refresh to see a new pin.
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# The places file is the whole point. It must never be served stale.
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Type = "application/json; charset=utf-8"
+
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
