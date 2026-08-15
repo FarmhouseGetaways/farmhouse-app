@@ -80,17 +80,24 @@ minus the automatic redeploy when the repo changes.
 
 ## What is in here
 
-    index.html          the whole page
-    css/legend.css      all of the styling
-    js/data.js          countries, continents, US state grid — static reference data
-    js/usmap.js         GENERATED — the state outlines as SVG paths (60 KB)
-    js/store.js         the list: load, save, export, and every derived number
-    js/map.js           Leaflet setup, custom pins, the curved route line
-    js/app.js           rendering, the scoreboards, the add/edit form
-    data/places.json    the published list of places
-    images/favicon.svg  the mark
-    tools/build-usmap.mjs  one-off generator for js/usmap.js — see below
-    vendor/leaflet/     Leaflet 1.9.4, vendored (BSD-2)
+    index.html                the whole page
+    css/legend.css            all of the styling
+
+    js/data.js                countries, continents, the US state grid
+    js/store.js               the list: load, save, export, every derived number
+    js/map.js                 Leaflet setup, custom pins, the curved route line
+    js/app.js                 rendering, the scoreboards, the add/edit form
+    js/usmap.js               GENERATED — state outlines as SVG paths (60 KB)
+    js/worldmap.js            GENERATED — vector world under the tiles (134 KB)
+
+    data/places.json          the published list of places
+    data/demo-places.json     invented trips, used only by the --demo preview
+    images/favicon.svg        the mark
+    vendor/leaflet/           Leaflet 1.9.4, vendored (BSD-2)
+
+    tools/build-usmap.mjs     regenerates js/usmap.js
+    tools/build-worldmap.mjs  regenerates js/worldmap.js
+    tools/build-preview.mjs   bundles the site into one shareable .html
 
 The only thing fetched from anyone else at runtime is the map tiles — CARTO
 for the night map, Esri for satellite and terrain. Both are keyless and free
@@ -99,7 +106,31 @@ Everything else, Leaflet and the state outlines included, is served from this
 folder, so the page still boots with no network at all.
 
 State geometry comes from the US Census Bureau's cartographic boundary files
-(public domain) via `us-atlas` (ISC).
+(public domain) via `us-atlas` (ISC); the world outlines from Natural Earth
+(public domain) via `world-atlas` (ISC).
+
+## A single file to pass around
+
+    node tools/build-preview.mjs legend-preview.html
+    node tools/build-preview.mjs legend-demo.html --demo
+
+The first writes the whole site — stylesheet, scripts, Leaflet, favicon and
+the published places — into one self-contained HTML file you can email,
+message, or open straight off a USB stick with no server. The second does the
+same but inlines `data/demo-places.json`, a dozen invented trips across six
+continents, so every tracker has something in it; that build carries a banner
+saying the places are made up.
+
+This is for *showing* the site. Deploying is still the folder.
+
+## When the tiles can't be reached
+
+The basemap comes from a tile server, and that is the one piece of this site
+that can be unavailable — no signal, a blocked network, an outage. Underneath
+the tiles sits `js/worldmap.js`, a vector outline of every country in a pane
+below them. It is invisible whenever the tiles load, and it is the map when
+they don't: the pins, the route line and every scoreboard keep working, and a
+small note appears saying why the map looks plain.
 
 ## Regenerating the state outlines
 
@@ -116,6 +147,18 @@ The source is the Census Bureau's 2017 cartographic boundaries by way of
 outlines to what a map this size can show, drops the islands too small to
 cover a pixel, and rounds coordinates to a tenth of a pixel — about 600 KB of
 geometry down to 60 KB, with the shapes still reading as themselves.
+
+`js/worldmap.js` works the same way, from `tools/build-worldmap.mjs`:
+
+    npm install world-atlas topojson-client topojson-simplify
+    node tools/build-worldmap.mjs
+
+One wrinkle worth knowing if you ever rerun it: Russia and Fiji straddle the
+antimeridian, so their outlines hold points at both +179 and -179. Drawn
+naively, every such pair becomes a line straight across the map. The generator
+unwraps those rings and emits them twice, once shifted a full turn, so both
+sides of the seam are covered. Antarctica is left alone — its outline spans
+the globe because Antarctica does.
 
 ## Counting rules
 

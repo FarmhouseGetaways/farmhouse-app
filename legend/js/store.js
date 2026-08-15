@@ -47,6 +47,7 @@ window.LEGEND = window.LEGEND || {};
   var places = [];
   var dirty = false;          // working copy differs from the published file
   var listeners = [];
+  var warnedAboutStorage = false;
 
   function uid() {
     return "p_" + Math.random().toString(36).slice(2, 9);
@@ -97,13 +98,16 @@ window.LEGEND = window.LEGEND || {};
       localStorage.setItem(KEY, JSON.stringify(places));
       dirty = true;
     } catch (e) {
-      /* Private mode, or the quota is full. The list still works for this
-         session; it just won't survive a reload. Say so rather than fail
-         silently. */
+      /* Private mode, a full quota, or a sandboxed preview frame. The list
+         still works for this session; it just won't survive a reload. Worth
+         saying once — not on every keystroke of every edit. */
       console.warn("Could not save locally:", e);
-      alert("This browser would not let the site save locally. Your changes " +
-            "are live on screen but will be lost on reload — download the " +
-            "JSON now if you want to keep them.");
+      if (!warnedAboutStorage) {
+        warnedAboutStorage = true;
+        alert("This browser won't let the site save locally, so your changes " +
+              "will be lost on reload. They work fine on screen — use " +
+              "\"Download places.json\" to keep them.");
+      }
     }
     emit();
   }
@@ -118,6 +122,15 @@ window.LEGEND = window.LEGEND || {};
       if (Array.isArray(saved)) {
         places = cleanAll(saved).sort(byDate);
         dirty = true;
+        emit();
+        return Promise.resolve(places);
+      }
+
+      /* The single-file preview build inlines the published list, because it
+         has no server to fetch it from. */
+      if (L.INLINE_PLACES) {
+        places = cleanAll(L.INLINE_PLACES).sort(byDate);
+        dirty = false;
         emit();
         return Promise.resolve(places);
       }

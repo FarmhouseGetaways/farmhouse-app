@@ -223,6 +223,18 @@ select.ctl option { background: var(--ink-2); }
 .dot--beyond { background: var(--beyond); box-shadow: 0 0 9px var(--beyond); }
 .dot--fav    { background: var(--fav);    box-shadow: 0 0 9px var(--fav); }
 
+/* Shown only when the tile layer has failed and the vector world is doing
+   the work. Above Leaflet's panes, below its controls, and never in the way. */
+.tileless { display: none; }
+#map.is-tileless .tileless {
+  display: block; position: absolute; z-index: 900;
+  left: 12px; right: 12px; top: 12px; margin: 0 auto; max-width: 460px;
+  background: rgba(10, 15, 28, .86); backdrop-filter: blur(8px);
+  border: 1px solid var(--line-2); border-radius: 12px;
+  padding: 9px 13px; font-size: 12px; color: var(--dim); text-align: center;
+  pointer-events: none;
+}
+
 /* Leaflet, restyled for the dark shell. */
 .leaflet-container { background: #0a0f1c; font: inherit; }
 .leaflet-control-attribution {
@@ -584,4 +596,12 @@ select.ctl option { background: var(--ink-2); }
 .mapfail {
   display: grid; place-items: center; height: 100%;
   padding: 40px; text-align: center; color: var(--dim); font-size: 14px;
+}
+
+/* Only ever present in a --demo preview build (see tools/build-preview.mjs).
+   A page full of invented trips should say so above the fold. */
+.preview-flag {
+  margin: 0; padding: 10px 20px; text-align: center; font-size: 13px;
+  color: #0b1a18; background: linear-gradient(90deg, var(--go), var(--home));
+  font-weight: 600;
 }

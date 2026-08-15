@@ -66,6 +66,15 @@ window.LEGEND = window.LEGEND || {};
       noWrap: false
     }).addTo(map);
     tiles.getContainer().classList.toggle("is-photo", currentStyle !== "night");
+
+    /* If the tiles can't be fetched — offline, a blocked network, a preview
+       frame that allows no third-party requests — the vector world underneath
+       is what's left. Say so, once, rather than leaving someone to wonder why
+       the map looks like a paper cutout. */
+    map.getContainer().classList.remove("is-tileless");
+    tiles.once("tileerror", function () {
+      map.getContainer().classList.add("is-tileless");
+    });
   }
 
   /* A great-circle-ish arc between two stops. Real great circles need
@@ -141,7 +150,29 @@ window.LEGEND = window.LEGEND || {};
       }).setView([25, 0], 2);
 
       window.L.control.zoom({ position: "bottomright" }).addTo(map);
+
+      /* The vector world goes in a pane of its own beneath the tile pane
+         (Leaflet's tilePane sits at z-index 200). When the tiles arrive they
+         cover it completely; when they can't — offline, blocked, an outage —
+         it is the map, and the pins still have continents to sit on. */
+      if (L.WORLD_GEO) {
+        map.createPane("atlas");
+        map.getPane("atlas").style.zIndex = 150;
+        window.L.geoJSON(L.WORLD_GEO, {
+          pane: "atlas",
+          interactive: false,
+          className: "atlas",
+          style: { color: "#22304d", weight: 0.8, fillColor: "#111a2e", fillOpacity: 1 }
+        }).addTo(map);
+      }
+
       setTiles("night");
+
+      var note = document.createElement("p");
+      note.className = "tileless";
+      note.textContent = "Map tiles can't be reached from here, so this is the " +
+        "built-in vector world. Pins, routes and everything else work the same.";
+      el.appendChild(note);
 
       pathLayer = window.L.layerGroup().addTo(map);
       pinLayer = window.L.layerGroup().addTo(map);
