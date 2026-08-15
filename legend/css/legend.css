@@ -376,6 +376,52 @@ select.ctl option { background: var(--ink-2); }
   font-size: 9px; color: var(--go);
 }
 
+/* The geographic view of the same fifty. */
+
+.stateshapes {
+  max-width: 940px;
+  background:
+    radial-gradient(closest-side at 50% 45%, rgba(94, 234, 212, .05), transparent);
+}
+.usmap { width: 100%; height: auto; display: block; overflow: visible; }
+
+.usstate, .usdc {
+  fill: rgba(255, 255, 255, .045);
+  stroke: rgba(255, 255, 255, .18);
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition: fill .18s, stroke .18s;
+}
+.usstate:hover, .usdc:hover {
+  fill: rgba(255, 255, 255, .13);
+  stroke: rgba(255, 255, 255, .5);
+}
+.usstate:focus-visible, .usdc:focus-visible {
+  outline: none; stroke: #fff; stroke-width: 1.6;
+}
+.usstate.is-visited, .usdc.is-visited {
+  fill: rgba(45, 212, 191, .42);
+  stroke: rgba(126, 245, 226, .85);
+  stroke-width: 0.9;
+  /* The glow is what makes a filled state read as lit rather than painted.
+     A drop-shadow filter on every path would be expensive to animate, so it
+     is a static one on the group's fill colour instead. */
+  filter: drop-shadow(0 0 5px rgba(94, 234, 212, .5));
+}
+.usstate.is-visited:hover, .usdc.is-visited:hover {
+  fill: rgba(94, 234, 212, .62);
+  stroke: #d8fff8;
+}
+.usdc { stroke-dasharray: 2 2; }
+.usdc.is-visited { stroke-dasharray: none; }
+
+.uslabel {
+  fill: #eafffb; font-family: var(--mono); font-size: 12px; font-weight: 600;
+  text-anchor: middle; pointer-events: none;
+  paint-order: stroke; stroke: rgba(3, 20, 20, .75); stroke-width: 2.6;
+}
+
 /* ---------------------------------------------------------------- beyond */
 
 .section--beyond {
@@ -526,6 +572,8 @@ select.ctl option { background: var(--ink-2); }
   .tl__date { display: none; }
   .stategrid { gap: 3px; }
   .state { border-radius: 5px; }
+  /* Pushed right, a wrapped control row reads as detached from its heading. */
+  .section__head .controls { margin-left: 0; }
   /* Three buttons and a name don't fit on one phone-width line. */
   .row { flex-wrap: wrap; gap: 6px 10px; }
   .row__name { flex: 1 1 100%; }

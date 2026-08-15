@@ -26,6 +26,13 @@ spot. Dates matter more than they look: the dashed route line and the mileage
 total are both built from the places that have one, in the order they
 happened.
 
+The fifty-state board has two views, switched with the **Tiles / Map** toggle
+above it. *Tiles* is the square-per-state cartogram: every state has the same
+weight, so the score reads instantly and Rhode Island is as easy to tap as
+Texas. *Map* is the real geography — Alaska and Hawaii in their usual insets —
+which answers the other question, which corner of the country is still dark.
+Both are live and clickable, and the browser remembers which one you last used.
+
 Mark something **Beyond Earth** instead of a country and it lands in the
 *And beyond* section under one of four realms: the sky, under the sea,
 summits, and space.
@@ -76,16 +83,39 @@ minus the automatic redeploy when the repo changes.
     index.html          the whole page
     css/legend.css      all of the styling
     js/data.js          countries, continents, US state grid — static reference data
+    js/usmap.js         GENERATED — the state outlines as SVG paths (60 KB)
     js/store.js         the list: load, save, export, and every derived number
     js/map.js           Leaflet setup, custom pins, the curved route line
     js/app.js           rendering, the scoreboards, the add/edit form
     data/places.json    the published list of places
     images/favicon.svg  the mark
+    tools/build-usmap.mjs  one-off generator for js/usmap.js — see below
+    vendor/leaflet/     Leaflet 1.9.4, vendored (BSD-2)
 
-The only things fetched from anyone else are Leaflet (unpkg) and the map
-tiles (CARTO for the night map, Esri for satellite and terrain). All are
-keyless and free at this size; past a few thousand views a month, move the
-tiles to a keyed provider.
+The only thing fetched from anyone else at runtime is the map tiles — CARTO
+for the night map, Esri for satellite and terrain. Both are keyless and free
+at this size; past a few thousand views a month, move to a keyed provider.
+Everything else, Leaflet and the state outlines included, is served from this
+folder, so the page still boots with no network at all.
+
+State geometry comes from the US Census Bureau's cartographic boundary files
+(public domain) via `us-atlas` (ISC).
+
+## Regenerating the state outlines
+
+`js/usmap.js` is generated, not hand-written, and committed so the site has no
+build step. State borders move approximately never, so this should not need
+running again — but if it does, from the `legend` folder:
+
+    npm install us-atlas topojson-client topojson-simplify d3-geo
+    node tools/build-usmap.mjs
+    rm -rf node_modules package-lock.json package.json
+
+The source is the Census Bureau's 2017 cartographic boundaries by way of
+`us-atlas`, already projected with Albers USA. The generator simplifies the
+outlines to what a map this size can show, drops the islands too small to
+cover a pixel, and rounds coordinates to a tenth of a pixel — about 600 KB of
+geometry down to 60 KB, with the shapes still reading as themselves.
 
 ## Counting rules
 

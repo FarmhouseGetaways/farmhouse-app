@@ -183,14 +183,91 @@ window.LEGEND = window.LEGEND || {};
      US states — the tile cartogram
    * ------------------------------------------------------------------ */
 
+  /* Two ways of looking at the same fifty numbers, and they answer different
+     questions. The tile grid gives every state equal weight, so "how many
+     have I got" reads instantly and Rhode Island is as easy to hit as Texas.
+     The geographic map answers "where have I been" — which corner of the
+     country is still dark. The choice is remembered per browser. */
+  var USVIEW_KEY = "legend.usview";
+  var usView = "tiles";
+  try { usView = localStorage.getItem(USVIEW_KEY) || "tiles"; } catch (e) {}
+  if (usView !== "map") usView = "tiles";
+
+  var SUBS = {
+    tiles: "One square per state — Rhode Island counts as much as Texas.",
+    map: "The real shape of it. Alaska and Hawaii sit in their usual insets."
+  };
+
+  function applyUsView() {
+    var hasMap = !!L.US_PATHS;
+    $("#stategrid").hidden = usView === "map" && hasMap;
+    $("#stateshapes").hidden = !(usView === "map" && hasMap);
+    $("#states-sub").textContent = SUBS[$("#stateshapes").hidden ? "tiles" : "map"];
+    $$("[data-usview]").forEach(function (b) {
+      b.classList.toggle("is-on", b.getAttribute("data-usview") === usView);
+      b.hidden = !hasMap && b.getAttribute("data-usview") === "map";
+    });
+  }
+
+  function stateTitle(st, n) {
+    return st.name + (n ? " — " + n + " place" + (n > 1 ? "s" : "") : " — not yet");
+  }
+
+  /* The geographic view: one SVG path per state, straight out of usmap.js. */
+  function renderStateShapes(s) {
+    if (!L.US_PATHS) return;
+    var shapes = "", labels = "";
+
+    L.STATES.forEach(function (st) {
+      var d = L.US_PATHS[st.code];
+      if (!d) return;
+      var n = s.states[st.code] || 0;
+      shapes += '<path class="usstate' + (n ? " is-visited" : "") + '" d="' + d +
+        '" data-state="' + st.code + '" tabindex="0" role="button" aria-label="' +
+        esc(stateTitle(st, n)) + '"><title>' + esc(stateTitle(st, n)) + "</title></path>";
+
+      /* Abbreviations only where they help: on the states already collected,
+         and only where the shape is big enough to hold the text. Everything
+         else has a tooltip. */
+      var c = L.US_CENTROIDS[st.code];
+      if (n && c && BIG.indexOf(st.code) >= 0) {
+        labels += '<text class="uslabel" x="' + c[0] + '" y="' + (c[1] + 4) + '">' +
+          st.code + "</text>";
+      }
+    });
+
+    /* DC is about a pixel across at this scale, so it gets a target of its
+       own rather than a shape nobody could ever click. */
+    var dc = L.US_CENTROIDS.DC, dcn = s.states.DC || 0;
+    var dcMark = dc
+      ? '<circle class="usdc' + (dcn ? " is-visited" : "") + '" cx="' + dc[0] +
+        '" cy="' + dc[1] + '" r="5" data-state="DC" tabindex="0" role="button" ' +
+        'aria-label="' + esc(stateTitle(L.STATE_BY_CODE.DC, dcn)) + '">' +
+        "<title>" + esc(stateTitle(L.STATE_BY_CODE.DC, dcn)) + "</title></circle>"
+      : "";
+
+    $("#stateshapes").innerHTML =
+      '<svg class="usmap" viewBox="' + L.US_VIEWBOX + '" preserveAspectRatio="xMidYMid meet" ' +
+      'role="group" aria-label="Map of the United States, visited states highlighted">' +
+        "<g>" + shapes + dcMark + "</g><g>" + labels + "</g>" +
+      "</svg>";
+  }
+
+  /* States roomy enough for two letters at this size. */
+  var BIG = ["AK", "AZ", "AR", "CA", "CO", "FL", "GA", "IA", "ID", "IL", "IN",
+             "KS", "KY", "LA", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND",
+             "NE", "NM", "NV", "NY", "OH", "OK", "OR", "PA", "SC", "SD", "TN",
+             "TX", "UT", "VA", "WA", "WI", "WV", "WY"];
+
   function renderStates(s) {
+    renderStateShapes(s);
+    applyUsView();
     var host = $("#stategrid");
     host.innerHTML = L.STATES.map(function (st) {
       var n = s.states[st.code] || 0;
       return '<button type="button" class="state' + (n ? " is-visited" : "") +
         '" style="grid-row:' + (st.row + 1) + ";grid-column:" + (st.col + 1) +
-        '" data-state="' + st.code + '" title="' + esc(st.name) +
-        (n ? " — " + n + " place" + (n > 1 ? "s" : "") : " — not yet") + '">' +
+        '" data-state="' + st.code + '" title="' + esc(stateTitle(st, n)) + '">' +
         '<span class="state__code">' + st.code + "</span>" +
         (n > 1 ? '<span class="state__n">' + n + "</span>" : "") +
         "</button>";
@@ -561,10 +638,12 @@ window.LEGEND = window.LEGEND || {};
       autoCoords(true);
     });
 
-    $("#stategrid").addEventListener("click", function (e) {
-      var btn = e.target.closest("[data-state]");
-      if (!btn) return;
-      var code = btn.getAttribute("data-state");
+    /* Both state views behave the same: a state you've been to flies the map
+       there, one you haven't starts an entry for it. */
+    function pickState(e) {
+      var el = e.target.closest("[data-state]");
+      if (!el) return;
+      var code = el.getAttribute("data-state");
       var hit = Store.all().filter(function (p) { return p.state === code && p.lat !== null; })[0];
       if (hit) { showPlace(hit.id); return; }
       openForm(null);
@@ -572,6 +651,24 @@ window.LEGEND = window.LEGEND || {};
       syncFormMode();
       $("#f-state").value = code;
       autoCoords(true);
+    }
+    $("#stategrid").addEventListener("click", pickState);
+    $("#stateshapes").addEventListener("click", pickState);
+    /* SVG shapes are focusable but are not buttons, so Enter and Space have
+       to be wired by hand. */
+    $("#stateshapes").addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      if (!e.target.closest("[data-state]")) return;
+      e.preventDefault();
+      pickState(e);
+    });
+
+    $$("[data-usview]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        usView = btn.getAttribute("data-usview");
+        try { localStorage.setItem(USVIEW_KEY, usView); } catch (err) {}
+        applyUsView();
+      });
     });
 
     $("#country-search").addEventListener("input", function () {

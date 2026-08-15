@@ -142,9 +142,16 @@
   <section id="states" class="section">
     <div class="section__head">
       <h2>The fifty states</h2>
-      <p class="section__sub">One square per state — Rhode Island counts as much as Texas.</p>
+      <p class="section__sub" id="states-sub">One square per state — Rhode Island counts as much as Texas.</p>
+      <div class="controls">
+        <span class="ctl-group" role="group" aria-label="State map style">
+          <button type="button" class="ctl is-on" data-usview="tiles">Tiles</button>
+          <button type="button" class="ctl" data-usview="map">Map</button>
+        </span>
+      </div>
     </div>
     <div id="stategrid" class="stategrid"></div>
+    <div id="stateshapes" class="stateshapes" hidden></div>
     <p class="hint" id="states-left"></p>
   </section>
 
@@ -282,6 +289,7 @@
 
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="js/data.js"></script>
+<script src="js/usmap.js"></script>
 <script src="js/store.js"></script>
 <script src="js/map.js"></script>
 <script src="js/app.js"></script>
