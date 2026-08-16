@@ -166,5 +166,33 @@
     "notes": "SAMPLE DATA. 14,505 feet, the highest in the lower forty-eight.",
     "fav": false,
     "photos": []
+  },
+  {
+    "id": "d_iceland_plan",
+    "name": "Tokyo, Japan",
+    "kind": "planned",
+    "country": "JP",
+    "state": "",
+    "realm": "",
+    "lat": 35.68,
+    "lng": 139.65,
+    "date": "2027-04-10",
+    "notes": "SAMPLE DATA. Planned, not yet been.",
+    "fav": false,
+    "photos": []
+  },
+  {
+    "id": "d_egypt_plan",
+    "name": "Cairo, Egypt",
+    "kind": "planned",
+    "country": "EG",
+    "state": "",
+    "realm": "",
+    "lat": 30.04,
+    "lng": 31.24,
+    "date": "2027-11-02",
+    "notes": "SAMPLE DATA. Planned, not yet been.",
+    "fav": false,
+    "photos": []
   }
 ]

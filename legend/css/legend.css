@@ -168,7 +168,10 @@ select.ctl option { background: var(--ink-2); }
 }
 .hero__kicker { color: var(--dim); letter-spacing: .34em; text-transform: uppercase; font-size: 11px; }
 .hero__name {
-  font-size: clamp(40px, 8.4vw, 92px); font-weight: 800; margin: 10px 0 4px;
+  /* Sized to sit on one line beside the globe at full width; the hero goes
+     single-column below 900px, where the vw term takes over. */
+  font-size: clamp(38px, 6.2vw, 74px); font-weight: 800; margin: 10px 0 4px;
+  text-wrap: balance;
   background: linear-gradient(180deg, #ffffff 20%, #9fb3d6 115%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
