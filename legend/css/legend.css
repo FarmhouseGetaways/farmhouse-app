@@ -150,6 +150,22 @@ select.ctl option { background: var(--ink-2); }
   to   { transform: translate3d(3%, 3%, 0) scale(1.12); }
 }
 .hero__in { position: relative; max-width: var(--wrap); margin: 0 auto; }
+.hero__top {
+  display: grid; gap: 22px 40px; align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+}
+.hero__globe { position: relative; justify-self: center; width: min(100%, 400px); }
+#globe {
+  display: block; width: 100%; aspect-ratio: 1; cursor: grab; touch-action: none;
+  /* The sphere throws its own light onto the page behind it. */
+  filter: drop-shadow(0 18px 50px rgba(20, 184, 166, .18));
+}
+#globe.is-over { cursor: pointer; }
+#globe.is-dragging { cursor: grabbing; }
+.hero__hint {
+  text-align: center; margin-top: 6px; font-size: 11px; color: var(--dimmer);
+  letter-spacing: .12em; text-transform: uppercase;
+}
 .hero__kicker { color: var(--dim); letter-spacing: .34em; text-transform: uppercase; font-size: 11px; }
 .hero__name {
   font-size: clamp(40px, 8.4vw, 92px); font-weight: 800; margin: 10px 0 4px;
@@ -573,6 +589,11 @@ select.ctl option { background: var(--ink-2); }
 .foot__small { color: var(--dimmer); font-size: 11px; margin-top: 6px; }
 
 /* ---------------------------------------------------------------- small screens */
+
+@media (max-width: 900px) {
+  .hero__top { grid-template-columns: 1fr; }
+  .hero__globe { width: min(100%, 320px); }
+}
 
 @media (max-width: 820px) {
   .nav { display: none; }

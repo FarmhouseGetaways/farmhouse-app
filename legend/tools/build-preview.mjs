@@ -34,6 +34,7 @@ const SCRIPTS = [
   "js/data.js",
   "js/usmap.js",
   "js/worldmap.js",
+  "js/globe.js",
   "js/store.js",
   "js/map.js",
   "js/app.js"

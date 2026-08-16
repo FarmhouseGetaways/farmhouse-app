@@ -412,8 +412,19 @@ window.LEGEND = window.LEGEND || {};
 
   var firstRender = true;
 
+  var globe = null;
+
   function render(places) {
     var s = Store.stats();
+    if (globe) {
+      globe.setPlaces(places);
+      /* Open facing the most recent trip rather than the middle of the
+         Pacific, which is where longitude 0 tilted 16° happens to land. */
+      if (firstRender) {
+        var latest = places.slice().sort(newestFirst)[0];
+        if (latest && latest.lat !== null) globe.lookAt(latest.lat, latest.lng);
+      }
+    }
     renderStats(s);
     renderContinents(s);
     renderCountries(s);
@@ -601,6 +612,22 @@ window.LEGEND = window.LEGEND || {};
       $("#map").innerHTML = '<p class="mapfail">The map could not load — ' +
         "no connection, most likely. Everything else on the page still works.</p>";
     }
+    /* The globe is decoration with a job: it is also the fastest way to see
+       that a trip was on the other side of the planet. If canvas or the
+       outlines are missing it simply doesn't appear. */
+    try {
+      if (L.Globe && L.WORLD_GEO) {
+        globe = L.Globe.create($("#globe"), {
+          onSelect: function (id) { showPlace(id); }
+        });
+      } else {
+        $(".hero__globe").hidden = true;
+      }
+    } catch (err) {
+      console.error("Globe unavailable:", err);
+      $(".hero__globe").hidden = true;
+    }
+
     Store.onChange(render);
 
     /* Header + controls */
