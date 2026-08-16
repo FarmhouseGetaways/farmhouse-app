@@ -311,6 +311,78 @@ window.LEGEND = window.LEGEND || {};
   }
 
   /* ------------------------------------------------------------------ *
+     The passport
+
+     One stamp per country, in the order they were first visited, plus one for
+     each realm beyond the map. The angles and the ink colour are derived from
+     the country code rather than randomised, so a stamp sits the same way
+     every time the page loads — a stamp that jitters on refresh reads as a
+     bug, not as ink.
+   * ------------------------------------------------------------------ */
+
+  var INKS = ["ink-a", "ink-b", "ink-c", "ink-d"];
+
+  function hash(str) {
+    var h = 0;
+    for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+
+  function renderPassport(places) {
+    var firstVisit = {};
+    places.forEach(function (p) {
+      if (p.kind === "planned" || !p.country) return;
+      if (!L.COUNTRY_BY_CODE[p.country]) return;
+      var cur = firstVisit[p.country];
+      if (!cur || (p.date && (!cur.date || p.date < cur.date))) firstVisit[p.country] = p;
+    });
+
+    var codes = Object.keys(firstVisit).sort(function (a, b) {
+      var da = firstVisit[a].date, db = firstVisit[b].date;
+      if (!da && !db) return a.localeCompare(b);
+      if (!da) return 1;
+      if (!db) return -1;
+      return da < db ? -1 : 1;
+    });
+
+    var realms = L.REALMS.filter(function (r) {
+      return places.some(function (p) { return p.kind === "beyond" && p.realm === r.code; });
+    });
+
+    $("#card-summary").disabled = !places.length;
+    $("#passport-sub").textContent = codes.length
+      ? codes.length + (codes.length === 1 ? " stamp" : " stamps") +
+        (realms.length ? " and " + realms.length + " beyond Earth." : ".")
+      : "Empty for now. The first country stamps it.";
+
+    var out = codes.map(function (code) {
+      var c = L.COUNTRY_BY_CODE[code];
+      var p = firstVisit[code];
+      var h = hash(code);
+      var tilt = (h % 9) - 4;                      // −4° to +4°
+      return '<button type="button" class="stamp ' + INKS[h % INKS.length] +
+        '" style="--tilt:' + tilt + 'deg" data-country="' + code +
+        '" title="' + esc(c.name) + '">' +
+        '<span class="stamp__flag">' + flag(code) + "</span>" +
+        '<span class="stamp__name">' + esc(c.name) + "</span>" +
+        '<span class="stamp__date">' + esc(p.date ? L.fmtDate(p.date).toUpperCase() : "UNDATED") + "</span>" +
+        "</button>";
+    }).join("");
+
+    out += realms.map(function (r) {
+      var h = hash(r.code);
+      return '<span class="stamp stamp--beyond" style="--tilt:' + ((h % 7) - 3) + 'deg">' +
+        '<span class="stamp__flag">✦</span>' +
+        '<span class="stamp__name">' + esc(r.name) + "</span>" +
+        '<span class="stamp__date">BEYOND EARTH</span>' +
+        "</span>";
+    }).join("");
+
+    $("#stamps").innerHTML = out ||
+      '<p class="empty">No stamps yet.</p>';
+  }
+
+  /* ------------------------------------------------------------------ *
      The record book
    * ------------------------------------------------------------------ */
 
@@ -440,6 +512,7 @@ window.LEGEND = window.LEGEND || {};
             '<span class="row__meta">' + esc(p.date ? L.fmtDate(p.date) : "undated") + "</span>" +
             '<span class="row__acts">' +
               '<button type="button" class="mini" data-place="' + esc(p.id) + '">Show</button>' +
+              '<button type="button" class="mini" data-card="' + esc(p.id) + '">Card</button>' +
               '<button type="button" class="mini" data-edit="' + esc(p.id) + '">Edit</button>' +
               '<button type="button" class="mini mini--danger" data-del="' + esc(p.id) + '">Delete</button>' +
             "</span>" +
@@ -498,6 +571,7 @@ window.LEGEND = window.LEGEND || {};
     renderCountries(s);
     renderStates(s);
     renderBeyond(places);
+    renderPassport(places);
     renderRecords(places);
     renderTimeline(places);
     renderManage(places);
@@ -829,7 +903,7 @@ window.LEGEND = window.LEGEND || {};
 
     /* Country + state tiles jump the map to that place, or open the form
        pre-filled if it has never been visited. */
-    $("#countries").addEventListener("click", function (e) {
+    function pickCountry(e) {
       var btn = e.target.closest("[data-country]");
       if (!btn) return;
       var code = btn.getAttribute("data-country");
@@ -839,7 +913,9 @@ window.LEGEND = window.LEGEND || {};
       $("#f-country").value = code;
       syncFormMode();
       autoCoords(true);
-    });
+    }
+    $("#countries").addEventListener("click", pickCountry);
+    $("#stamps").addEventListener("click", pickCountry);
 
     /* Both state views behave the same: a state you've been to flies the map
        there, one you haven't starts an entry for it. */
@@ -889,6 +965,12 @@ window.LEGEND = window.LEGEND || {};
       if (show) { showPlace(show.getAttribute("data-place")); return; }
       var edit = e.target.closest && e.target.closest("#managelist [data-edit]");
       if (edit) { openForm(Store.get(edit.getAttribute("data-edit"))); return; }
+      var card = e.target.closest && e.target.closest("[data-card]");
+      if (card) {
+        var cp = Store.get(card.getAttribute("data-card"));
+        if (cp && L.Cards) L.Cards.place(cp);
+        return;
+      }
       var del = e.target.closest && e.target.closest("[data-del]");
       if (del) {
         var p = Store.get(del.getAttribute("data-del"));
@@ -951,6 +1033,9 @@ window.LEGEND = window.LEGEND || {};
     });
 
     /* Data management */
+    $("#card-summary").addEventListener("click", function () {
+      if (L.Cards) L.Cards.summary();
+    });
     $("#download").addEventListener("click", download);
     $("#import").addEventListener("change", function () {
       if (this.files && this.files[0]) importFile(this.files[0]);

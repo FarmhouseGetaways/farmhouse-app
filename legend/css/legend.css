@@ -300,12 +300,6 @@ select.ctl option { background: var(--ink-2); }
 .pop__where { color: var(--go); font-size: 12px; margin-top: 3px; }
 .pop__date { color: var(--dim); font-size: 12px; }
 .pop__notes { color: var(--text); font-size: 13px; margin-top: 7px; opacity: .88; }
-.pop__edit {
-  margin-top: 10px; font: inherit; font-size: 12px; cursor: pointer;
-  background: transparent; border: 1px solid var(--line-2); color: var(--dim);
-  border-radius: 8px; padding: 4px 9px;
-}
-.pop__edit:hover { color: var(--text); border-color: var(--go); }
 
 /* Pins are ours, so they can glow and breathe. */
 .pin-wrap { background: none !important; border: 0 !important; }
@@ -707,3 +701,53 @@ select.ctl option { background: var(--ink-2); }
 button.sup__place { cursor: pointer; }
 button.sup__place:hover { color: var(--go); }
 .sup__place em { font-style: normal; color: var(--go); font-family: var(--mono); font-size: 12px; }
+
+/* ---------------------------------------------------------------- passport */
+
+.section--passport {
+  background:
+    radial-gradient(closest-side at 15% 0%, rgba(251, 191, 36, .07), transparent),
+    radial-gradient(closest-side at 85% 100%, rgba(94, 234, 212, .06), transparent);
+}
+.stamps { display: flex; flex-wrap: wrap; gap: 18px 20px; padding: 6px 0; }
+
+/* An inked rubber stamp: double rule, a little crooked, and only as saturated
+   as ink on a page ever is. */
+.stamp {
+  position: relative; display: grid; place-items: center; gap: 2px;
+  width: 148px; min-height: 108px; padding: 12px 10px;
+  transform: rotate(var(--tilt, 0deg));
+  background: transparent; cursor: pointer; font: inherit;
+  border: 2px solid currentColor; border-radius: 10px;
+  color: var(--go); opacity: .82;
+  transition: transform .18s, opacity .18s;
+}
+.stamp::before {
+  content: ""; position: absolute; inset: 3px; border: 1px solid currentColor;
+  border-radius: 7px; opacity: .55;
+}
+button.stamp:hover { transform: rotate(0deg) scale(1.05); opacity: 1; }
+.stamp__flag { font-size: 22px; line-height: 1; }
+.stamp__name {
+  font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  text-align: center; color: inherit; max-width: 124px;
+}
+.stamp__date {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  color: inherit; opacity: .75;
+}
+/* Four inks, assigned by country code so a stamp keeps its colour. */
+.stamp.ink-a { color: #5eead4; }
+.stamp.ink-b { color: #a78bfa; }
+.stamp.ink-c { color: #fbbf24; }
+.stamp.ink-d { color: #f472b6; }
+.stamp--beyond { color: var(--beyond); border-style: dashed; }
+
+/* popup actions */
+.pop__acts { display: flex; gap: 6px; margin-top: 10px; }
+.pop__btn {
+  font: inherit; font-size: 12px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line-2); color: var(--dim);
+  border-radius: 8px; padding: 4px 9px;
+}
+.pop__btn:hover { color: var(--text); border-color: var(--go); }
