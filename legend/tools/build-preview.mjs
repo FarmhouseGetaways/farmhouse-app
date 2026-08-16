@@ -67,8 +67,12 @@ const favicon = "data:image/svg+xml;base64," +
   Buffer.from(read("images/favicon.svg")).toString("base64");
 html = html.replace(/href="images\/favicon\.svg"/g, () => 'href="' + favicon + '"');
 
-/* preconnect to a tile host is noise in a file that may never see a network. */
+/* preconnect to a tile host is noise in a file that may never see a network,
+   and a manifest link points at a file that isn't there. (The service worker
+   registration checks for the inlined places and skips itself.) */
 html = html.replace(/<link rel="preconnect"[^>]*>\n?/g, () => "");
+html = html.replace(/<link rel="manifest"[^>]*>\n?/g, () => "");
+html = html.replace(/<link rel="apple-touch-icon"[^>]*>\n?/g, () => "");
 
 /* Scripts, in the order the page loads them. `</script>` inside a string
    literal would close the tag it is written into, so it is split. */
@@ -90,9 +94,11 @@ if (DEMO) {
     '  <p class="preview-flag">Preview build — the places below are made up, ' +
     'so there is something to click. Nothing here is real travel data.</p>');
 }
+/* A preview exists to be poked at, so it opens in edit mode. On the deployed
+   site editing is off until ?edit asks for it. */
 html = html.replace("<script>", () =>
-  "<script>\nwindow.LEGEND = window.LEGEND || {};\nLEGEND.INLINE_PLACES = " +
-  places.trim() + ";\n</script>\n<script>");
+  "<script>\nwindow.LEGEND = window.LEGEND || {};\nLEGEND.FORCE_EDIT = true;\n" +
+  "LEGEND.INLINE_PLACES = " + places.trim() + ";\n</script>\n<script>");
 
 /* Guard against a file being missed. Script and style bodies are excluded
    first — they are full of markup built at runtime (the photo in a popup, for
@@ -100,7 +106,7 @@ html = html.replace("<script>", () =>
 const markupOnly = html
   .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
   .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "");
-const remaining = markupOnly.match(/(src|href)="(?!data:|https?:|#)[^"]+"/g);
+const remaining = markupOnly.match(/(src|href)="(?!data:|https?:|#|\?)[^"]+"/g);
 if (remaining) throw new Error("Not self-contained, still references: " + remaining.join(", "));
 
 writeFileSync(OUT, html);

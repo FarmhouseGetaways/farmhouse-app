@@ -96,7 +96,9 @@ window.LEGEND = window.LEGEND || {};
     $("#stat-miles-sub").textContent = s.pathLength > 1
       ? "across " + s.pathLength + " dated stops"
       : "add dates to measure";
-    $("#stat-places-sub").textContent = s.places === 1 ? "pin on the map" : "pins on the map";
+    $("#stat-places-sub").textContent = s.planned
+      ? "been · " + s.planned + " planned"
+      : (s.places === 1 ? "pin on the map" : "pins on the map");
 
     $$("[data-bar]").forEach(function (bar) {
       var key = bar.getAttribute("data-bar");
@@ -165,7 +167,9 @@ window.LEGEND = window.LEGEND || {};
             '<span class="cgroup__n">' + got + " / " + list.length + "</span></h3>" +
           '<div class="cgrid">' + list.map(function (x) {
             var n = s.countries[x.code] || 0;
+            var wish = !n && s.plannedCountries[x.code];
             return '<button type="button" class="country' + (n ? " is-visited" : "") +
+              (wish ? " is-planned" : "") +
               (x.territory ? " is-territory" : "") + '" data-country="' + x.code +
               '" title="' + esc(x.name) + (n ? " — " + n + " place" + (n > 1 ? "s" : "") : "") + '">' +
               '<span class="country__flag">' + flag(x.code) + "</span>" +
@@ -499,10 +503,13 @@ window.LEGEND = window.LEGEND || {};
         lastYear = year;
       }
       out += '' +
-        '<button type="button" class="tl__item' + (p.fav ? " is-fav" : "") + '" data-place="' + esc(p.id) + '">' +
+        '<button type="button" class="tl__item' + (p.fav ? " is-fav" : "") +
+          (p.kind === "planned" ? " is-planned" : "") +
+          '" data-place="' + esc(p.id) + '">' +
           '<span class="tl__dot tl__dot--' + esc(p.kind) + '"></span>' +
           '<span class="tl__body">' +
-            '<span class="tl__name">' + (p.country ? flag(p.country) + " " : "") + esc(p.name) + "</span>" +
+            '<span class="tl__name">' + (p.country ? flag(p.country) + " " : "") + esc(p.name) +
+              (p.kind === "planned" ? ' <span class="tl__tag">planned</span>' : "") + "</span>" +
             '<span class="tl__where">' + esc(whereLine(p)) + "</span>" +
             (p.notes ? '<span class="tl__notes">' + esc(p.notes) + "</span>" : "") +
           "</span>" +
@@ -875,9 +882,49 @@ window.LEGEND = window.LEGEND || {};
     }, 400);
   }
 
+  /* ------------------------------------------------------------------ *
+     Edit mode
+
+     A visitor should see a travel map, not a control panel. Everything that
+     changes the list is hidden until edit mode is on, which is a URL away:
+
+         legenddzbinski.com/?edit      turn it on for this browser
+         legenddzbinski.com/?edit=0    turn it off again
+
+     It is not a lock. Anyone who wants to can find it, and it would be
+     dishonest to imply otherwise — but nothing they do reaches anyone else,
+     because publishing means committing a file to the repository. This just
+     keeps the furniture out of the way for people who came to look.
+   * ------------------------------------------------------------------ */
+
+  var EDIT_KEY = "legend.edit";
+  var editing = false;
+
+  function applyEditMode() {
+    /* The single-file preview build is for trying things out, so it starts
+       in edit mode and doesn't offer to leave it — there is nothing to
+       publish to from a file on a desktop. */
+    if (L.FORCE_EDIT) {
+      editing = true;
+      document.body.classList.add("is-editing");
+      $("#editbar").hidden = true;
+      return;
+    }
+    var q = new URLSearchParams(location.search);
+    if (q.has("edit")) {
+      editing = q.get("edit") !== "0" && q.get("edit") !== "false";
+      try { localStorage.setItem(EDIT_KEY, editing ? "1" : "0"); } catch (e) {}
+    } else {
+      try { editing = localStorage.getItem(EDIT_KEY) === "1"; } catch (e) { editing = false; }
+    }
+    document.body.classList.toggle("is-editing", editing);
+    $("#editbar").hidden = !editing;
+  }
+
   function init() {
     dialog = $("#dialog");
     form = $("#place-form");
+    applyEditMode();
     fillSelects();
 
     /* The map is the centrepiece, but it is not the site. If Leaflet or the
@@ -1168,6 +1215,23 @@ window.LEGEND = window.LEGEND || {};
         });
       }, { rootMargin: "-45% 0px -50% 0px" });
       sections.forEach(function (s) { obs.observe(s); });
+    }
+
+    /* Installable, and fully usable with no signal once installed. Skipped
+       on file:// (no service workers there) and in the single-file preview,
+       which has no sw.js to register. */
+    if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0 &&
+        !L.INLINE_PLACES) {
+      var register = function () {
+        navigator.serviceWorker.register("sw.js").catch(function (err) {
+          console.warn("Service worker not registered:", err);
+        });
+      };
+      /* Waiting for `load` unconditionally loses the race on a warm cache,
+         where load has already fired by the time this runs and the listener
+         is never called. */
+      if (document.readyState === "complete") register();
+      else window.addEventListener("load", register);
     }
 
     Store.load();

@@ -35,7 +35,43 @@ Both are live and clickable, and the browser remembers which one you last used.
 
 Mark something **Beyond Earth** instead of a country and it lands in the
 *And beyond* section under one of four realms: the sky, under the sea,
-summits, and space.
+summits, and space. Mark it **Planned** and it goes on the map as a hollow
+pin that counts for nothing — not a country, not a mile — until it happens
+and you change it to a visit. Counting a wish as a visit would make every
+number on the page a lie.
+
+Photos: press **Add a photo…** in the form. The browser shrinks the picture,
+hands you the file, and fills in the path. Drop that file into
+`legend/images/trips/`, commit it, and it appears in the map popups, the
+timeline and the photo wall. Several per place is fine.
+
+## Who sees the editor
+
+Visitors get a travel map. The *Add a place* button and the whole data
+section are hidden until edit mode is on, which is a URL away:
+
+    legenddzbinski.com/?edit      turn it on, and it sticks on that browser
+    legenddzbinski.com/?edit=0    turn it off again
+
+This is not a lock, and it would be dishonest to call it one — anyone can
+find it. It doesn't need to be a lock: nothing anyone does in their browser
+reaches anybody else, because publishing means committing a file to this
+repository. It just keeps the furniture out of the way for people who came
+to look at the map.
+
+## On a phone
+
+The site is installable. Open it in Safari or Chrome, choose *Add to Home
+Screen*, and it gets an icon and opens without browser chrome. Because
+everything except the map tiles is served from this folder, an installed copy
+works with no signal at all — the vector world stands in for the tiles, and
+every scoreboard, the globe and the editor keep working.
+
+The service worker (`sw.js`) serves the shell from cache and refreshes it in
+the background, with one deliberate exception: `data/places.json` goes to the
+network first. It is the file that changes, and a stale copy would silently
+hide a trip published this morning. Bump `VERSION` in `sw.js` when the file
+list changes.
 
 ## Publishing what you added
 
@@ -84,6 +120,9 @@ minus the automatic redeploy when the repo changes.
     css/legend.css            all of the styling
 
     js/data.js                countries, continents, the US state grid
+    js/globe.js               the spinning canvas globe in the hero
+    js/cards.js               the shareable PNG cards
+    js/photos.js              photo resizing and the lightbox
     js/store.js               the list: load, save, export, every derived number
     js/map.js                 Leaflet setup, custom pins, the curved route line
     js/app.js                 rendering, the scoreboards, the add/edit form
@@ -95,8 +134,13 @@ minus the automatic redeploy when the repo changes.
     images/favicon.svg        the mark
     vendor/leaflet/           Leaflet 1.9.4, vendored (BSD-2)
 
+    icons/                    GENERATED — app icons, from images/favicon.svg
+    manifest.webmanifest      makes it installable
+    sw.js                     offline cache
+
     tools/build-usmap.mjs     regenerates js/usmap.js
     tools/build-worldmap.mjs  regenerates js/worldmap.js
+    tools/build-icons.mjs     regenerates icons/ from the favicon
     tools/build-preview.mjs   bundles the site into one shareable .html
 
 The only thing fetched from anyone else at runtime is the map tiles — CARTO
@@ -160,6 +204,20 @@ unwraps those rings and emits them twice, once shifted a full turn, so both
 sides of the seam are covered. Antarctica is left alone — its outline spans
 the globe because Antarctica does.
 
+## What's on the page
+
+* **The globe** — hero, canvas, spins on its own, drag it, tap a pin.
+* **The map** — pins, curved route arcs in date order, three basemaps, a year
+  filter, and **Play the journey**, which walks the trips in order with the
+  totals counting up as they were at the time.
+* **The world** — seven continent rings and every country, searchable.
+* **The fifty states** — the tile cartogram or the real map, toggled.
+* **And beyond** — sky, sea, summits, space.
+* **The photo wall** — every picture, hidden until there is one.
+* **The passport** — a stamp per country, and a card you can save and post.
+* **The record book** — seventeen badges and the superlatives.
+* **The timeline** — everything by year, newest first.
+
 ## Counting rules
 
 * **Countries** counts sovereign countries only, out of the 195 in
@@ -170,3 +228,6 @@ the globe because Antarctica does.
   denominator stays 50.
 * **Miles** are great-circle hops between consecutive dated stops. A place
   with no date isn't in a sequence, so it isn't counted rather than guessed.
+* **Planned places** count for nothing anywhere until they become visits.
+* **Badges** are rules, not awards: they are recomputed from the list on every
+  change, so deleting a place puts one out again.

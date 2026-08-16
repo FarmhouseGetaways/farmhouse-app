@@ -13,7 +13,8 @@
 <meta property="og:url" content="https://legenddzbinski.com/">
 
 <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="images/favicon.svg">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 
 <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
 <!-- Leaflet is vendored in vendor/leaflet rather than pulled from a CDN: one
@@ -26,6 +27,12 @@
 <body>
 
 <a class="skip" href="#map-section">Skip to the map</a>
+
+<!-- Only shown in edit mode, which is turned on with ?edit in the URL. -->
+<div class="editbar" id="editbar" hidden>
+  <span>Edit mode — you are the only one who sees your changes until you publish them.</span>
+  <a href="?edit=0">Leave edit mode</a>
+</div>
 
 <header class="head">
   <div class="head__in">
@@ -126,6 +133,7 @@
         <span><i class="dot dot--home"></i> Home base</span>
         <span><i class="dot dot--beyond"></i> Beyond Earth</span>
         <span><i class="dot dot--fav"></i> Favourite</span>
+        <span><i class="dot dot--planned"></i> Planned</span>
       </div>
     </div>
     <p class="hint">Tap a pin for the story. The dashed line follows the trips in the order they happened.</p>
@@ -271,6 +279,7 @@
         <label><input type="radio" name="kind" value="visit" checked> Visit</label>
         <label><input type="radio" name="kind" value="home"> Home base</label>
         <label><input type="radio" name="kind" value="beyond"> Beyond Earth</label>
+        <label><input type="radio" name="kind" value="planned"> Planned</label>
       </fieldset>
 
       <div id="f-earth">

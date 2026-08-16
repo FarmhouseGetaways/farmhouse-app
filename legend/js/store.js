@@ -70,7 +70,8 @@ window.LEGEND = window.LEGEND || {};
     return {
       id: p.id || uid(),
       name: name,
-      kind: p.kind === "home" || p.kind === "beyond" ? p.kind : "visit",
+      kind: p.kind === "home" || p.kind === "beyond" || p.kind === "planned"
+        ? p.kind : "visit",
       country: String(p.country || "").toUpperCase(),
       state: String(p.state || "").toUpperCase(),
       realm: String(p.realm || ""),
@@ -215,7 +216,12 @@ window.LEGEND = window.LEGEND || {};
   }
 
   Store.stats = function () {
-    var list = places;
+    /* Planned trips are on the map and in the list, but they have not
+       happened, so they count for nothing: not a country, not a state, not a
+       continent, not a mile. Counting a wish as a visit would make every
+       number on the page a lie. */
+    var list = places.filter(function (p) { return p.kind !== "planned"; });
+    var planned = places.filter(function (p) { return p.kind === "planned"; });
     var countries = {}, states = {}, continents = {}, realms = {}, years = {};
 
     list.forEach(function (p) {
@@ -246,8 +252,15 @@ window.LEGEND = window.LEGEND || {};
     });
     var realStates = Object.keys(states).filter(function (s) { return s !== "DC"; });
 
+    var plannedCountries = {};
+    planned.forEach(function (p) {
+      if (p.country && L.COUNTRY_BY_CODE[p.country]) plannedCountries[p.country] = true;
+    });
+
     return {
       places: list.length,
+      planned: planned.length,
+      plannedCountries: plannedCountries,
       countries: countries,
       countryCount: sovereign.length,
       countryTotal: L.COUNTRY_TOTAL,

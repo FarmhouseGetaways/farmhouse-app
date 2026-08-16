@@ -102,7 +102,9 @@ window.LEGEND = window.LEGEND || {};
   }
 
   function icon(p) {
-    var kind = p.kind === "home" ? "home" : p.kind === "beyond" ? "beyond" : "visit";
+    var kind = p.kind === "home" ? "home"
+             : p.kind === "beyond" ? "beyond"
+             : p.kind === "planned" ? "planned" : "visit";
     var cls = "pin pin--" + kind + (p.fav ? " pin--fav" : "");
     return window.L.divIcon({
       className: "pin-wrap",
@@ -243,7 +245,10 @@ window.LEGEND = window.LEGEND || {};
       });
 
       if (opts.showPath !== false) {
-        var seq = pinned.filter(function (p) { return p.date; }).sort(L.Store.byDate);
+        /* The route is what happened, so a planned trip is not on it. */
+        var seq = pinned.filter(function (p) {
+          return p.date && p.kind !== "planned";
+        }).sort(L.Store.byDate);
         for (var i = 1; i < seq.length; i++) {
           var pts = arc(seq[i - 1], seq[i]);
           window.L.polyline(pts, {
