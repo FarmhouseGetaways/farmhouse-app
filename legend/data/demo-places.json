@@ -10,8 +10,8 @@
     "lng": -116.87,
     "date": "",
     "notes": "SAMPLE DATA. Home base — every trip starts and ends here.",
-    "photo": "",
-    "fav": true
+    "fav": true,
+    "photos": []
   },
   {
     "id": "d_zion",
@@ -24,8 +24,8 @@
     "lng": -113.03,
     "date": "2019-05-18",
     "notes": "SAMPLE DATA. Angels Landing at sunrise.",
-    "photo": "",
-    "fav": false
+    "fav": false,
+    "photos": []
   },
   {
     "id": "d_denver",
@@ -38,8 +38,8 @@
     "lng": -104.99,
     "date": "2021-07-04",
     "notes": "SAMPLE DATA.",
-    "photo": "",
-    "fav": false
+    "fav": false,
+    "photos": []
   },
   {
     "id": "d_austin",
@@ -52,8 +52,8 @@
     "lng": -97.74,
     "date": "2022-03-11",
     "notes": "SAMPLE DATA.",
-    "photo": "",
-    "fav": false
+    "fav": false,
+    "photos": []
   },
   {
     "id": "d_reykjavik",
@@ -66,8 +66,8 @@
     "lng": -21.94,
     "date": "2022-09-27",
     "notes": "SAMPLE DATA. Northern lights over Þingvellir.",
-    "photo": "",
-    "fav": true
+    "fav": true,
+    "photos": []
   },
   {
     "id": "d_kyoto",
@@ -80,8 +80,8 @@
     "lng": 135.77,
     "date": "2023-04-02",
     "notes": "SAMPLE DATA. Cherry blossoms, exactly on time.",
-    "photo": "",
-    "fav": false
+    "fav": false,
+    "photos": []
   },
   {
     "id": "d_serengeti",
@@ -94,8 +94,8 @@
     "lng": 34.83,
     "date": "2023-11-14",
     "notes": "SAMPLE DATA. The migration crossing the Mara.",
-    "photo": "",
-    "fav": true
+    "fav": true,
+    "photos": []
   },
   {
     "id": "d_machu",
@@ -108,8 +108,8 @@
     "lng": -72.55,
     "date": "2024-06-21",
     "notes": "SAMPLE DATA. Four days on the Inca Trail to get there.",
-    "photo": "",
-    "fav": false
+    "fav": false,
+    "photos": []
   },
   {
     "id": "d_sydney",
@@ -122,8 +122,8 @@
     "lng": 151.21,
     "date": "2024-12-30",
     "notes": "SAMPLE DATA. New Year over the harbour.",
-    "photo": "",
-    "fav": false
+    "fav": false,
+    "photos": []
   },
   {
     "id": "d_reef",
@@ -136,8 +136,8 @@
     "lng": 147.7,
     "date": "2025-01-08",
     "notes": "SAMPLE DATA. Forty feet down on the outer reef.",
-    "photo": "",
-    "fav": false
+    "fav": false,
+    "photos": []
   },
   {
     "id": "d_perris",
@@ -150,8 +150,8 @@
     "lng": -117.22,
     "date": "2025-06-20",
     "notes": "SAMPLE DATA. Thirteen thousand feet, then not.",
-    "photo": "",
-    "fav": true
+    "fav": true,
+    "photos": []
   },
   {
     "id": "d_whitney",
@@ -164,7 +164,7 @@
     "lng": -118.29,
     "date": "2025-08-16",
     "notes": "SAMPLE DATA. 14,505 feet, the highest in the lower forty-eight.",
-    "photo": "",
-    "fav": false
+    "fav": false,
+    "photos": []
   }
 ]

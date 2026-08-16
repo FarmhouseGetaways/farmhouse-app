@@ -311,6 +311,23 @@ window.LEGEND = window.LEGEND || {};
   }
 
   /* ------------------------------------------------------------------ *
+     The photo wall — every picture on the site, newest first.
+   * ------------------------------------------------------------------ */
+
+  function renderWall(places) {
+    var shots = L.Photos ? L.Photos.all(places) : [];
+    $("#wall-section").hidden = !shots.length;
+    if (!shots.length) return;
+    $("#wall-sub").textContent = shots.length +
+      (shots.length === 1 ? " picture." : " pictures.") + " Tap one to fill the screen.";
+    $("#wall").innerHTML = shots.map(function (shot, i) {
+      return '<button type="button" class="wall__item" data-wall="' + i + '">' +
+        '<img src="' + esc(shot.src) + '" alt="" loading="lazy">' +
+        '<span class="wall__cap">' + esc(shot.caption) + "</span></button>";
+    }).join("");
+  }
+
+  /* ------------------------------------------------------------------ *
      The passport
 
      One stamp per country, in the order they were first visited, plus one for
@@ -489,6 +506,9 @@ window.LEGEND = window.LEGEND || {};
             '<span class="tl__where">' + esc(whereLine(p)) + "</span>" +
             (p.notes ? '<span class="tl__notes">' + esc(p.notes) + "</span>" : "") +
           "</span>" +
+          (p.photos && p.photos.length
+            ? '<span class="tl__shot"><img src="' + esc(p.photos[0]) + '" alt="" loading="lazy"></span>'
+            : "") +
           '<span class="tl__date">' + esc(p.date ? L.fmtDate(p.date) : "—") + "</span>" +
         "</button>";
     });
@@ -571,6 +591,7 @@ window.LEGEND = window.LEGEND || {};
     renderCountries(s);
     renderStates(s);
     renderBeyond(places);
+    renderWall(places);
     renderPassport(places);
     renderRecords(places);
     renderTimeline(places);
@@ -732,7 +753,8 @@ window.LEGEND = window.LEGEND || {};
     $("#f-lat").value = place && place.lat !== null ? place.lat : "";
     $("#f-lng").value = place && place.lng !== null ? place.lng : "";
     $("#f-notes").value = place ? place.notes : "";
-    $("#f-photo").value = place ? place.photo : "";
+    $("#f-photos").value = place && place.photos ? place.photos.join("\n") : "";
+    renderFormShots();
     $("#f-fav").checked = place ? place.fav : false;
 
     syncFormMode();
@@ -749,6 +771,17 @@ window.LEGEND = window.LEGEND || {};
     $("#f-pick").classList.remove("is-armed");
     $("#f-pick").textContent = "Pick on map";
     editingId = null;
+  }
+
+  /* The thumbnails under the photo box, so a wrong path is obvious before
+     the place is saved rather than after. */
+  function renderFormShots() {
+    var urls = $("#f-photos").value.split("\n").map(function (u) { return u.trim(); })
+      .filter(Boolean);
+    $("#f-shots").innerHTML = urls.map(function (u) {
+      return '<img src="' + esc(u) + '" alt="" loading="lazy">';
+    }).join("");
+    $("#f-shots").hidden = !urls.length;
   }
 
   function centreOf() {
@@ -781,7 +814,9 @@ window.LEGEND = window.LEGEND || {};
       lng: $("#f-lng").value === "" ? null : Number($("#f-lng").value),
       date: $("#f-date").value,
       notes: $("#f-notes").value.trim(),
-      photo: $("#f-photo").value.trim(),
+      photos: $("#f-photos").value.split("\n").map(function (u) {
+        return u.trim();
+      }).filter(Boolean),
       fav: $("#f-fav").checked
     };
     if (!data.name) { $("#f-name").focus(); return; }
@@ -960,7 +995,35 @@ window.LEGEND = window.LEGEND || {};
     });
 
     /* Anything with data-place shows it on the map; data-edit opens it. */
+    /* Any photo anywhere opens the lightbox, with the rest of that place's
+       photos alongside it. */
     document.addEventListener("click", function (e) {
+      var wall = e.target.closest && e.target.closest("[data-wall]");
+      if (wall && L.Photos) {
+        L.Photos.open(L.Photos.all(Store.all()), Number(wall.getAttribute("data-wall")));
+        return;
+      }
+      var shot = e.target.closest && e.target.closest("[data-shot]");
+      if (shot && L.Photos) {
+        var sp = Store.get(shot.getAttribute("data-shot"));
+        if (sp) {
+          L.Photos.open(sp.photos.map(function (src) {
+            return { src: src, caption: sp.name };
+          }), Number(shot.getAttribute("data-shot-i") || 0));
+        }
+        return;
+      }
+      var tshot = e.target.closest && e.target.closest(".tl__shot");
+      if (tshot && L.Photos) {
+        var tp = Store.get(tshot.closest("[data-place]").getAttribute("data-place"));
+        if (tp && tp.photos.length) {
+          L.Photos.open(tp.photos.map(function (src) {
+            return { src: src, caption: tp.name };
+          }), 0);
+          e.stopPropagation();
+          return;
+        }
+      }
       var show = e.target.closest && e.target.closest("[data-place]");
       if (show) { showPlace(show.getAttribute("data-place")); return; }
       var edit = e.target.closest && e.target.closest("#managelist [data-edit]");
@@ -1029,6 +1092,38 @@ window.LEGEND = window.LEGEND || {};
         btn.textContent = "Picked ✓";
         dialog.classList.remove("is-peek");
         document.body.classList.add("is-locked");
+      });
+    });
+
+    /* Pick a photo: shrink it here, hand back the file, fill in the path.
+       There is no server to upload to, and pretending otherwise would be the
+       one dishonest thing on this page. */
+    $("#f-photos").addEventListener("input", renderFormShots);
+    $("#f-photofile").addEventListener("change", function () {
+      var files = Array.prototype.slice.call(this.files || []);
+      this.value = "";
+      if (!files.length || !L.Photos) return;
+
+      var base = $("#f-name").value.trim() || "photo";
+      var start = $("#f-photos").value.split("\n").filter(Boolean).length;
+      var note = $("#f-photonote");
+
+      files.reduce(function (chain, file, i) {
+        return chain.then(function () {
+          return L.Photos.resize(file, base, start + i + 1).then(function (out) {
+            L.Photos.download(out.blob, out.name);
+            var box = $("#f-photos");
+            box.value = (box.value ? box.value.replace(/\s*$/, "\n") : "") +
+              "images/trips/" + out.name;
+            renderFormShots();
+            note.innerHTML = "Saved <code>" + esc(out.name) + "</code> — " +
+              Math.round(out.bytes / 1024) + " KB, down from " +
+              Math.round(out.from / 1024) + " KB. Put it in " +
+              "<code>legend/images/trips/</code> and commit.";
+          });
+        });
+      }, Promise.resolve()).catch(function (err) {
+        note.textContent = err.message || "That photo could not be used.";
       });
     });
 

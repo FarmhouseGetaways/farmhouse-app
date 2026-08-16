@@ -125,7 +125,12 @@ window.LEGEND = window.LEGEND || {};
     }
 
     var html = '<div class="pop">';
-    if (p.photo) html += '<img class="pop__img" src="' + esc(p.photo) + '" alt="">';
+    if (p.photos && p.photos.length) {
+      html += '<span class="pop__shots">' + p.photos.slice(0, 3).map(function (src, i) {
+        return '<img class="pop__img" src="' + esc(src) + '" alt="" loading="lazy" ' +
+          'data-shot="' + esc(p.id) + '" data-shot-i="' + i + '">';
+      }).join("") + "</span>";
+    }
     html += '<h4 class="pop__title">' + esc(p.name) + (p.fav ? ' <span class="pop__star">★</span>' : '') + '</h4>';
     if (bits.length) html += '<p class="pop__where">' + bits.join(" · ") + "</p>";
     if (p.date) html += '<p class="pop__date">' + esc(L.fmtDate(p.date)) + "</p>";

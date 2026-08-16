@@ -175,6 +175,15 @@
     <div id="beyond" class="realms"></div>
   </section>
 
+  <!-- ================= PHOTO WALL ================= -->
+  <section id="wall-section" class="section" hidden>
+    <div class="section__head">
+      <h2>The photo wall</h2>
+      <p class="section__sub" id="wall-sub"></p>
+    </div>
+    <div id="wall" class="wall"></div>
+  </section>
+
   <!-- ================= PASSPORT ================= -->
   <section id="passport" class="section section--passport">
     <div class="section__head">
@@ -304,10 +313,15 @@
         <textarea id="f-notes" rows="3" placeholder="What happened there."></textarea>
       </label>
 
-      <label class="field">
-        <span class="field__label">Photo URL <em>optional</em></span>
-        <input type="url" id="f-photo" placeholder="https://…">
-      </label>
+      <div class="field">
+        <span class="field__label">Photos <em>optional</em></span>
+        <div id="f-shots" class="shots"></div>
+        <textarea id="f-photos" rows="2" placeholder="images/trips/kyoto-1.jpg&#10;one per line"></textarea>
+        <div class="coords__acts">
+          <label class="mini mini--file">Add a photo…<input type="file" id="f-photofile" accept="image/*" multiple hidden></label>
+          <span class="field__note" id="f-photonote">Resized in your browser, then saved for you to drop in <code>images/trips/</code>.</span>
+        </div>
+      </div>
 
       <label class="check"><input type="checkbox" id="f-fav"> Mark as a favourite</label>
 
@@ -326,6 +340,7 @@
 <script src="js/worldmap.js"></script>
 <script src="js/globe.js"></script>
 <script src="js/cards.js"></script>
+<script src="js/photos.js"></script>
 <script src="js/store.js"></script>
 <script src="js/map.js"></script>
 <script src="js/app.js"></script>

@@ -40,7 +40,7 @@ window.LEGEND = window.LEGEND || {};
     lng: -116.87,
     date: "",
     notes: "Home base. Every trip starts and ends here.",
-    photo: "",
+    photos: [],
     fav: true
   }];
 
@@ -60,6 +60,13 @@ window.LEGEND = window.LEGEND || {};
     var lat = Number(p.lat), lng = Number(p.lng);
     var name = String(p.name || "").trim();
     if (!name) return null;
+
+    /* Places used to carry a single `photo`. Anything written before that
+       changed still loads, and is written back out as a list of one. */
+    var photos = Array.isArray(p.photos) ? p.photos : [];
+    if (!photos.length && p.photo) photos = [p.photo];
+    photos = photos.map(function (u) { return String(u || "").trim(); })
+                   .filter(Boolean);
     return {
       id: p.id || uid(),
       name: name,
@@ -71,7 +78,7 @@ window.LEGEND = window.LEGEND || {};
       lng: isFinite(lng) ? lng : null,
       date: String(p.date || ""),
       notes: String(p.notes || ""),
-      photo: String(p.photo || ""),
+      photos: photos,
       fav: !!p.fav
     };
   }
