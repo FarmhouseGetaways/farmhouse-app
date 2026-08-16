@@ -311,6 +311,74 @@ window.LEGEND = window.LEGEND || {};
   }
 
   /* ------------------------------------------------------------------ *
+     The record book
+   * ------------------------------------------------------------------ */
+
+  function placeChip(p, label) {
+    if (!p) return "";
+    return '<div class="sup">' +
+      '<span class="sup__label">' + esc(label) + "</span>" +
+      '<button type="button" class="sup__place" data-place="' + esc(p.id) + '">' +
+        (p.country ? flag(p.country) + " " : "") + esc(p.name) + "</button>" +
+      "</div>";
+  }
+
+  function renderRecords(places) {
+    var a = Store.awards();
+    var sup = a.supers;
+
+    $("#records-sub").textContent = a.earned + " of " + a.badges.length +
+      " earned. They light up on their own as places go in.";
+
+    $("#badges").innerHTML = a.badges.map(function (b) {
+      return '<article class="badge' + (b.got ? " is-got" : "") + '">' +
+        '<span class="badge__glyph">' + b.glyph + "</span>" +
+        '<h3 class="badge__name">' + esc(b.name) + "</h3>" +
+        '<p class="badge__note">' + esc(b.note) + "</p>" +
+        (!b.got && b.at ? '<p class="badge__at">' + esc(b.at) + "</p>" : "") +
+        "</article>";
+    }).join("");
+
+    var out = "";
+    out += placeChip(sup.north, "Farthest north");
+    out += placeChip(sup.south, "Farthest south");
+    out += placeChip(sup.east, "Farthest east");
+    out += placeChip(sup.west, "Farthest west");
+
+    if (sup.farthest) {
+      out += '<div class="sup"><span class="sup__label">Farthest from home</span>' +
+        '<button type="button" class="sup__place" data-place="' + esc(sup.farthest.place.id) + '">' +
+        esc(sup.farthest.place.name) + ' <em>' + sup.farthest.miles.toLocaleString() +
+        " mi</em></button></div>";
+    }
+    if (sup.longest) {
+      out += '<div class="sup"><span class="sup__label">Longest single hop</span>' +
+        '<button type="button" class="sup__place" data-place="' + esc(sup.longest.to.id) + '">' +
+        esc(sup.longest.from.name) + " → " + esc(sup.longest.to.name) +
+        ' <em>' + sup.longest.miles.toLocaleString() + " mi</em></button></div>";
+    }
+    if (sup.topCountry) {
+      var c = L.COUNTRY_BY_CODE[sup.topCountry.code];
+      out += '<div class="sup"><span class="sup__label">Most visited</span>' +
+        '<span class="sup__place">' + flag(sup.topCountry.code) + " " +
+        esc(c ? c.name : sup.topCountry.code) + ' <em>' + sup.topCountry.n +
+        " place" + (sup.topCountry.n > 1 ? "s" : "") + "</em></span></div>";
+    }
+    if (sup.busiestYear) {
+      out += '<div class="sup"><span class="sup__label">Busiest year</span>' +
+        '<span class="sup__place">' + esc(sup.busiestYear.year) + ' <em>' +
+        sup.busiestYear.n + " trip" + (sup.busiestYear.n > 1 ? "s" : "") + "</em></span></div>";
+    }
+    if (sup.first && sup.latest && sup.first !== sup.latest) {
+      out += '<div class="sup"><span class="sup__label">On the road since</span>' +
+        '<span class="sup__place">' + esc(L.fmtDate(sup.first.date)) + "</span></div>";
+    }
+
+    $("#supers").innerHTML = out ||
+      '<p class="empty">Add a few places and the records fill themselves in.</p>';
+  }
+
+  /* ------------------------------------------------------------------ *
      Timeline
    * ------------------------------------------------------------------ */
 
@@ -430,6 +498,7 @@ window.LEGEND = window.LEGEND || {};
     renderCountries(s);
     renderStates(s);
     renderBeyond(places);
+    renderRecords(places);
     renderTimeline(places);
     renderManage(places);
     renderYearFilter(s);

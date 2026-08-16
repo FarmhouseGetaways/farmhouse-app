@@ -653,3 +653,57 @@ select.ctl option { background: var(--ink-2); }
 
 .ctl:disabled { opacity: .4; cursor: not-allowed; }
 .ctl:disabled:hover { background: var(--card-2); border-color: var(--line); }
+
+/* ---------------------------------------------------------------- records */
+
+.badges {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+.badge {
+  position: relative; overflow: hidden;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px 16px 18px; transition: border-color .2s, background .2s, transform .2s;
+}
+.badge__glyph {
+  display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 10px;
+  border-radius: 50%; font-size: 16px;
+  background: rgba(255,255,255,.05); color: var(--dimmer);
+  border: 1px solid var(--line);
+}
+.badge__name { font-size: 14.5px; }
+.badge__note { font-size: 12.5px; color: var(--dimmer); margin-top: 5px; }
+.badge__at {
+  margin-top: 8px; font-family: var(--mono); font-size: 11px; color: var(--dim);
+  letter-spacing: .04em;
+}
+/* Earned badges are the only lit thing in the grid, so the row reads as a
+   score at a glance rather than a list of rules. */
+.badge.is-got {
+  background: rgba(94, 234, 212, .07); border-color: rgba(94, 234, 212, .36);
+}
+.badge.is-got:hover { transform: translateY(-2px); }
+.badge.is-got .badge__glyph {
+  background: linear-gradient(160deg, rgba(94,234,212,.35), rgba(20,184,166,.14));
+  color: #eafffb; border-color: rgba(94,234,212,.5);
+  box-shadow: 0 0 18px rgba(94,234,212,.25);
+}
+.badge.is-got .badge__note { color: var(--dim); }
+
+.supers {
+  margin-top: 26px; display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.sup {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 13px;
+}
+.sup__label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dimmer); flex: none; }
+.sup__place {
+  font: inherit; font-size: 13.5px; color: var(--text); text-align: right;
+  background: none; border: 0; padding: 0; cursor: default;
+}
+button.sup__place { cursor: pointer; }
+button.sup__place:hover { color: var(--go); }
+.sup__place em { font-style: normal; color: var(--go); font-family: var(--mono); font-size: 12px; }

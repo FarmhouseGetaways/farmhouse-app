@@ -258,6 +258,146 @@ window.LEGEND = window.LEGEND || {};
     };
   };
 
+  /* ------------------------------------------------------------------ *
+     Records — badges and superlatives.
+
+     Both are read straight off the list every time it changes, so nothing
+     has to be awarded, stored or kept in sync. A badge is a rule and a
+     threshold; when the places satisfy it, it lights up. Delete a place and
+     it goes out again, which is the only honest behaviour for a scoreboard.
+   * ------------------------------------------------------------------ */
+
+  var ARCTIC = 66.56;      // the polar circles, to the nearest hundredth
+  var TROPIC = 23.44;      // Cancer and Capricorn
+
+  Store.awards = function () {
+    var s = Store.stats();
+    var all = places;
+    var pinned = all.filter(function (p) { return p.lat !== null && p.lng !== null; });
+    var real = pinned.filter(function (p) { return p.kind !== "planned"; });
+    var dated = real.filter(function (p) { return p.date; }).sort(byDate);
+    var home = all.filter(function (p) { return p.kind === "home"; })[0] ||
+               all.filter(function (p) { return p.lat !== null; })[0] || null;
+
+    function any(fn) { return real.some(fn); }
+    function extreme(pick, better) {
+      return real.reduce(function (best, p) {
+        return !best || better(pick(p), pick(best)) ? p : best;
+      }, null);
+    }
+
+    /* East-west distance covered, taking the short way round each time. Past
+       360° of it you have been round the world, whichever route you took. */
+    var spun = 0;
+    for (var i = 1; i < dated.length; i++) {
+      var d = Math.abs(dated[i].lng - dated[i - 1].lng) % 360;
+      spun += Math.min(d, 360 - d);
+    }
+
+    /* The longest single hop, and the farthest from home. */
+    var longest = null;
+    for (i = 1; i < dated.length; i++) {
+      var miles = haversine(dated[i - 1], dated[i]);
+      if (!longest || miles > longest.miles) {
+        longest = { from: dated[i - 1], to: dated[i], miles: Math.round(miles) };
+      }
+    }
+    var farthest = null;
+    if (home) {
+      real.forEach(function (p) {
+        if (p === home) return;
+        var m = Math.round(haversine(home, p));
+        if (!farthest || m > farthest.miles) farthest = { place: p, miles: m };
+      });
+    }
+
+    var years = Object.keys(s.years);
+    var busiest = years.sort(function (a, b) { return s.years[b] - s.years[a]; })[0];
+    var countryCounts = s.countries;
+    var topCountry = Object.keys(countryCounts).sort(function (a, b) {
+      return countryCounts[b] - countryCounts[a];
+    })[0];
+
+    var badges = [
+      { code: "first",     glyph: "◈", name: "Wheels Up",
+        note: "The first dated trip on the board.",
+        got: dated.length >= 1 },
+      { code: "ten",       glyph: "◉", name: "Ten Countries",
+        note: "Ten of the world's " + s.countryTotal + ".",
+        got: s.countryCount >= 10, at: s.countryCount + " / 10" },
+      { code: "twentyfive", glyph: "◎", name: "Twenty-Five Countries",
+        note: "An eighth of the planet.",
+        got: s.countryCount >= 25, at: s.countryCount + " / 25" },
+      { code: "halfstates", glyph: "▤", name: "Half the States",
+        note: "Twenty-five down.",
+        got: s.stateCount >= 25, at: s.stateCount + " / 25" },
+      { code: "allstates", glyph: "▦", name: "All Fifty",
+        note: "Every last one, Hawaii and Alaska included.",
+        got: s.stateCount >= 50, at: s.stateCount + " / 50" },
+      { code: "continents", glyph: "✦", name: "Seven Continents",
+        note: "Antarctica is the hard one.",
+        got: s.continentCount >= 7, at: s.continentCount + " / 7" },
+      { code: "equator",   glyph: "≡", name: "Both Hemispheres",
+        note: "North and south of the equator.",
+        got: any(function (p) { return p.lat > 0; }) &&
+             any(function (p) { return p.lat < 0; }) },
+      { code: "meridian",  glyph: "⌖", name: "Both Sides of Greenwich",
+        note: "East and west of the prime meridian.",
+        got: any(function (p) { return p.lng > 0; }) &&
+             any(function (p) { return p.lng < 0; }) },
+      { code: "tropics",   glyph: "☀", name: "Cancer and Capricorn",
+        note: "Above one tropic and below the other.",
+        got: any(function (p) { return p.lat > TROPIC; }) &&
+             any(function (p) { return p.lat < -TROPIC; }) },
+      { code: "arctic",    glyph: "❄", name: "Arctic Circle",
+        note: "North of " + ARCTIC + "°, where the sun doesn't set in June.",
+        got: any(function (p) { return p.lat >= ARCTIC; }) },
+      { code: "antarctic", glyph: "❅", name: "Antarctic Circle",
+        note: "South of " + ARCTIC + "°.",
+        got: any(function (p) { return p.lat <= -ARCTIC; }) },
+      { code: "around",    glyph: "↻", name: "Around the World",
+        note: "360° of east-west travel, added up trip by trip.",
+        got: spun >= 360, at: Math.round(spun) + "° / 360°" },
+      { code: "coast",     glyph: "⇔", name: "Coast to Coast",
+        note: "The Pacific and the Atlantic, both from American soil.",
+        got: real.some(function (p) { return p.country === "US" && p.lng < -117; }) &&
+             real.some(function (p) { return p.country === "US" && p.lng > -80; }) },
+      { code: "longhaul",  glyph: "⟶", name: "Long Haul",
+        note: "A single hop of five thousand miles or more.",
+        got: !!longest && longest.miles >= 5000,
+        at: longest ? longest.miles.toLocaleString() + " / 5,000 mi" : "" },
+      { code: "farfrom",   glyph: "⊕", name: "Halfway Round",
+        note: "Five thousand miles from home base.",
+        got: !!farthest && farthest.miles >= 5000,
+        at: farthest ? farthest.miles.toLocaleString() + " / 5,000 mi" : "" },
+      { code: "beyond",    glyph: "✧", name: "Off the Map",
+        note: "Somewhere that isn't on any continent.",
+        got: s.realmCount >= 1 },
+      { code: "allrealms", glyph: "✵", name: "Sky, Sea, Summit, Space",
+        note: "All four realms beyond the map.",
+        got: s.realmCount >= L.REALMS.length,
+        at: s.realmCount + " / " + L.REALMS.length }
+    ];
+
+    return {
+      badges: badges,
+      earned: badges.filter(function (b) { return b.got; }).length,
+      supers: {
+        north: extreme(function (p) { return p.lat; }, function (a, b) { return a > b; }),
+        south: extreme(function (p) { return p.lat; }, function (a, b) { return a < b; }),
+        east:  extreme(function (p) { return p.lng; }, function (a, b) { return a > b; }),
+        west:  extreme(function (p) { return p.lng; }, function (a, b) { return a < b; }),
+        longest: longest,
+        farthest: farthest,
+        busiestYear: busiest ? { year: busiest, n: s.years[busiest] } : null,
+        topCountry: topCountry
+          ? { code: topCountry, n: countryCounts[topCountry] } : null,
+        first: dated[0] || null,
+        latest: dated[dated.length - 1] || null
+      }
+    };
+  };
+
   Store.haversine = haversine;
   Store.byDate = byDate;
   L.Store = Store;
