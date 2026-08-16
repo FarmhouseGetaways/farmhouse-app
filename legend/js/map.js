@@ -46,6 +46,7 @@ window.LEGEND = window.LEGEND || {};
   var markers = {};              // place id -> marker
   var pickCallback = null;
   var pickPin = null;
+  var caption = null;
   var currentStyle = "night";
   var onSelect = null;
 
@@ -168,6 +169,13 @@ window.LEGEND = window.LEGEND || {};
 
       setTiles("night");
 
+      /* The playback caption. Built here rather than in the page so the map
+         owns everything drawn inside its own frame. */
+      caption = document.createElement("div");
+      caption.className = "cap";
+      caption.hidden = true;
+      el.appendChild(caption);
+
       var note = document.createElement("p");
       note.className = "tileless";
       note.textContent = "Map tiles can't be reached from here, so this is the " +
@@ -270,6 +278,21 @@ window.LEGEND = window.LEGEND || {};
         if (pickPin && map) { map.removeLayer(pickPin); pickPin = null; }
         if (map) map.getContainer().classList.remove("is-picking");
       };
+    },
+
+    /* The band across the top of the map during playback: where we are, when
+       it was, and the running totals. Pass null to clear it. */
+    caption: function (html, progress) {
+      if (!caption) return;
+      caption.hidden = !html;
+      if (!html) return;
+      caption.innerHTML = html +
+        '<span class="cap__bar" style="--p:' + (progress || 0) + '%"></span>';
+    },
+
+    /* Centre without the flight, for the first frame of a playback. */
+    jumpTo: function (lat, lng, zoom) {
+      if (map) map.setView([lat, lng], zoom || 4, { animate: false });
     },
 
     invalidate: function () { if (map) map.invalidateSize(); }

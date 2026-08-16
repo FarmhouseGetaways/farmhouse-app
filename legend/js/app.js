@@ -433,8 +433,107 @@ window.LEGEND = window.LEGEND || {};
     renderTimeline(places);
     renderManage(places);
     renderYearFilter(s);
+
+    /* Nothing to play until there are two dated stops to fly between. */
+    var canPlay = playSequence().length >= 2;
+    $("#play").disabled = !canPlay;
+    $("#play").title = canPlay ? "Watch the trips in the order they happened"
+                               : "Add dates to at least two places to play the journey";
     L.Map.render(visible(places), { showPath: showPath, fit: firstRender || !!filterYear });
     firstRender = false;
+  }
+
+  /* ------------------------------------------------------------------ *
+     Playback — the journey, in order, as it happened.
+
+     Everything on screen is already a function of a list of places, so this
+     needs no separate animation system: it just re-renders with a longer and
+     longer prefix of the trips, and flies the map to the newest one. The
+     globe turns to follow, and the counters in the caption count what has
+     happened *so far* rather than the totals.
+   * ------------------------------------------------------------------ */
+
+  var play = { on: false, i: 0, seq: [], timer: null };
+  var summaryTimer = null;
+  var STEP_MS = 1900;
+
+  function playSequence() {
+    return Store.all().filter(function (p) {
+      return p.date && p.lat !== null && p.lng !== null && p.kind !== "planned";
+    }).sort(Store.byDate);
+  }
+
+  function playCaption() {
+    var so_far = play.seq.slice(0, play.i + 1);
+    var p = play.seq[play.i];
+    var countries = {}, miles = 0;
+    so_far.forEach(function (x, i) {
+      if (x.country) countries[x.country] = true;
+      if (i) miles += Store.haversine(so_far[i - 1], x);
+    });
+    var where = whereLine(p);
+    return '<span class="cap__where">' + esc(where || "Beyond Earth") + "</span>" +
+      '<span class="cap__name">' + esc(p.name) + "</span>" +
+      '<span class="cap__meta">' + esc(L.fmtDate(p.date)) + " · stop " +
+      (play.i + 1) + " of " + play.seq.length + " · " +
+      Object.keys(countries).length + " countr" +
+      (Object.keys(countries).length === 1 ? "y" : "ies") + " · " +
+      Math.round(miles).toLocaleString() + " miles" + "</span>";
+  }
+
+  function playStep() {
+    var p = play.seq[play.i];
+    L.Map.render(play.seq.slice(0, play.i + 1), { showPath: true, fit: false });
+    L.Map.caption(playCaption(), ((play.i + 1) / play.seq.length) * 100);
+    /* Zoom 3 keeps the hop that just happened on screen. Closer than that and
+       every stop looks the same: a pin in the middle of an empty frame. */
+    if (play.i === 0) L.Map.jumpTo(p.lat, p.lng, 3);
+    else L.Map.flyTo(p.lat, p.lng, 3);
+    if (globe) globe.lookAt(p.lat, p.lng);
+
+    play.timer = setTimeout(function () {
+      play.i++;
+      if (play.i >= play.seq.length) { stopPlay(true); return; }
+      playStep();
+    }, STEP_MS);
+  }
+
+  function startPlay() {
+    var seq = playSequence();
+    if (seq.length < 2) return;
+    clearTimeout(summaryTimer);
+    play = { on: true, i: 0, seq: seq, timer: null };
+    $("#play").textContent = "■ Stop";
+    $("#play").classList.add("is-on");
+    if (globe) globe.pause(true);
+    document.getElementById("map-section")
+      .scrollIntoView({ behavior: "smooth", block: "center" });
+    playStep();
+  }
+
+  function stopPlay(finished) {
+    if (!play.on) return;
+    clearTimeout(play.timer);
+    play.on = false;
+    $("#play").textContent = "▶ Play the journey";
+    $("#play").classList.remove("is-on");
+    if (globe) globe.pause(false);
+    /* Finishing leaves the whole trip on screen; stopping early does the
+       same, because a half-drawn map looks broken rather than paused. */
+    L.Map.render(visible(Store.all()), { showPath: showPath, fit: true });
+
+    if (!finished) { L.Map.caption(null); return; }
+
+    /* Reaching the end earns a curtain call: the totals, held long enough to
+       read, then gone. */
+    var s = Store.stats();
+    L.Map.caption(
+      '<span class="cap__where">The whole journey</span>' +
+      '<span class="cap__name">' + play.seq.length + " stops, " +
+      s.miles.toLocaleString() + " miles</span>" +
+      '<span class="cap__meta">' + s.countryCount + " countries · " +
+      s.continentCount + " continents · " + s.stateCount + " states</span>", 100);
+    summaryTimer = setTimeout(function () { L.Map.caption(null); }, 4200);
   }
 
   /* ------------------------------------------------------------------ *
@@ -589,6 +688,7 @@ window.LEGEND = window.LEGEND || {};
   function showPlace(id) {
     var p = Store.get(id);
     if (!p) return;
+    stopPlay();
     document.getElementById("map-section").scrollIntoView({ behavior: "smooth", block: "start" });
     setTimeout(function () {
       if (!L.Map.focus(id, 6) && p.lat === null) {
@@ -633,11 +733,18 @@ window.LEGEND = window.LEGEND || {};
     /* Header + controls */
     $("#add").addEventListener("click", function () { openForm(null); });
     $("#add-2").addEventListener("click", function () { openForm(null); });
+    $("#play").addEventListener("click", function () {
+      if (play.on) stopPlay(); else startPlay();
+    });
+    /* Anything that changes what the map is showing ends the playback, so the
+       two can never fight over the same layers. */
     $("#year").addEventListener("change", function () {
+      stopPlay();
       filterYear = this.value;
       L.Map.render(visible(Store.all()), { showPath: showPath, fit: true });
     });
     $("#toggle-path").addEventListener("click", function () {
+      stopPlay();
       showPath = !showPath;
       this.classList.toggle("is-off", !showPath);
       this.textContent = showPath ? "Route on" : "Route off";
@@ -729,6 +836,7 @@ window.LEGEND = window.LEGEND || {};
     });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && !dialog.hidden) closeForm();
+      else if (e.key === "Escape" && play.on) stopPlay();
     });
     $$("[name=kind]").forEach(function (r) {
       r.addEventListener("change", syncFormMode);

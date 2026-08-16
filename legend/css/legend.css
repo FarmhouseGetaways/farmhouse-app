@@ -239,6 +239,30 @@ select.ctl option { background: var(--ink-2); }
 .dot--beyond { background: var(--beyond); box-shadow: 0 0 9px var(--beyond); }
 .dot--fav    { background: var(--fav);    box-shadow: 0 0 9px var(--fav); }
 
+.ctl--play { font-variant-numeric: tabular-nums; }
+.ctl--play.is-on { background: rgba(244, 114, 182, .18); border-color: rgba(244,114,182,.5); color: var(--fav); }
+
+/* The playback band. Sits inside the map frame, above the panes and below
+   the controls, and carries its own progress bar along the bottom edge. */
+.cap {
+  position: absolute; z-index: 900; left: 12px; right: 12px; top: 12px;
+  margin: 0 auto; max-width: 520px; overflow: hidden;
+  background: rgba(6, 10, 20, .88); backdrop-filter: blur(10px);
+  border: 1px solid var(--line-2); border-radius: 14px;
+  padding: 12px 16px 14px; pointer-events: none; text-align: center;
+  animation: capIn .35s ease-out;
+}
+@keyframes capIn { from { opacity: 0; transform: translateY(-6px); } }
+.cap__where { display: block; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--go); }
+.cap__name { display: block; font-size: 19px; margin: 3px 0 4px; }
+.cap__meta { display: block; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.cap__bar {
+  position: absolute; left: 0; bottom: 0; height: 2px; width: var(--p, 0%);
+  background: linear-gradient(90deg, var(--go-deep), var(--go));
+  box-shadow: 0 0 10px rgba(94,234,212,.8);
+  transition: width .4s linear;
+}
+
 /* Shown only when the tile layer has failed and the vector world is doing
    the work. Above Leaflet's panes, below its controls, and never in the way. */
 .tileless { display: none; }
@@ -626,3 +650,6 @@ select.ctl option { background: var(--ink-2); }
   color: #0b1a18; background: linear-gradient(90deg, var(--go), var(--home));
   font-weight: 600;
 }
+
+.ctl:disabled { opacity: .4; cursor: not-allowed; }
+.ctl:disabled:hover { background: var(--card-2); border-color: var(--line); }
