@@ -547,7 +547,25 @@ window.LEGEND = window.LEGEND || {};
       }).join("");
     }
 
-    $("#dirty").hidden = !Store.isDirty();
+    /* The banner says what saving means here, which is a different sentence
+       depending on whether there is a server behind the site. */
+    var banner = $("#dirty");
+    banner.classList.toggle("is-bad", !!Store.lastError());
+    if (Store.isRemote()) {
+      banner.hidden = false;
+      banner.innerHTML = Store.lastError()
+        ? "<strong>That didn't save.</strong> " + esc(Store.lastError()) +
+          " Your change is still on this screen — try again, or sign in again if you've been away a while."
+        : Store.isDirty()
+          ? "<strong>Saving…</strong> Changes go to the site as you make them."
+          : "<strong>Saved.</strong> Everything here is live on the site for everyone. " +
+            "<em>Download places.json</em> still works as a backup.";
+    } else {
+      banner.hidden = !Store.isDirty();
+      banner.innerHTML = "<strong>Unpublished changes.</strong> These places live only " +
+        "in this browser. Press <em>Download places.json</em> and commit the file over " +
+        "<code>legend/data/places.json</code> to put them on the live site for everyone.";
+    }
     $("#json").value = Store.toJSON();
   }
 
@@ -899,6 +917,50 @@ window.LEGEND = window.LEGEND || {};
 
   var EDIT_KEY = "legend.edit";
   var editing = false;
+  var session = { configured: false, signedIn: false, checked: false };
+
+  /* Ask the server whether this browser is signed in. A site without the
+     functions — opened locally, or hosted somewhere static — simply never
+     answers, and the page stays in its local-only mode. */
+  function checkSession() {
+    return fetch("/api/auth", { credentials: "same-origin", cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; })
+      .then(function (out) {
+        session.checked = true;
+        session.configured = !!(out && out.configured);
+        session.signedIn = !!(out && out.signedIn);
+        applyEditMode();
+        return session;
+      });
+  }
+
+  function signIn(password) {
+    return fetch("/api/auth", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: password })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (out) {
+        out.status = r.status;
+        if (r.ok && out.ok) {
+          session.signedIn = true;
+          applyEditMode();
+        }
+        return out;
+      });
+    });
+  }
+
+  function signOut() {
+    return fetch("/api/auth", { method: "DELETE", credentials: "same-origin" })
+      .catch(function () {})
+      .then(function () {
+        session.signedIn = false;
+        applyEditMode();
+      });
+  }
 
   function applyEditMode() {
     /* The single-file preview build is for trying things out, so it starts
@@ -910,15 +972,33 @@ window.LEGEND = window.LEGEND || {};
       $("#editbar").hidden = true;
       return;
     }
+    /* Signing in is the way in on the deployed site. ?edit stays as the way
+       in when there is no server to sign in to — a local copy, or the site
+       before the functions were wired up — where "editing" only ever means
+       this browser and the download-the-JSON flow. */
+    var local = false;
     var q = new URLSearchParams(location.search);
     if (q.has("edit")) {
-      editing = q.get("edit") !== "0" && q.get("edit") !== "false";
-      try { localStorage.setItem(EDIT_KEY, editing ? "1" : "0"); } catch (e) {}
+      local = q.get("edit") !== "0" && q.get("edit") !== "false";
+      try { localStorage.setItem(EDIT_KEY, local ? "1" : "0"); } catch (e) {}
     } else {
-      try { editing = localStorage.getItem(EDIT_KEY) === "1"; } catch (e) { editing = false; }
+      try { local = localStorage.getItem(EDIT_KEY) === "1"; } catch (e) { local = false; }
     }
+    if (Store.isRemote()) local = false;      // the server decides, not a URL
+
+    editing = session.signedIn || local;
     document.body.classList.toggle("is-editing", editing);
-    $("#editbar").hidden = !editing;
+
+    var bar = $("#editbar");
+    bar.hidden = !editing;
+    $("#signout").hidden = !session.signedIn;
+    $("#leave-local").hidden = session.signedIn || !local;
+    $("#editbar-text").textContent = session.signedIn
+      ? "Signed in. Anything you add or change goes live for everyone."
+      : "Edit mode — your changes stay in this browser until you publish them.";
+
+    /* The sign-in link only appears where there is something to sign in to. */
+    $("#signin").hidden = !session.configured || session.signedIn;
   }
 
   function init() {
@@ -1157,12 +1237,28 @@ window.LEGEND = window.LEGEND || {};
 
       files.reduce(function (chain, file, i) {
         return chain.then(function () {
+          note.textContent = "Resizing…";
           return L.Photos.resize(file, base, start + i + 1).then(function (out) {
+            var addPath = function (path) {
+              var box = $("#f-photos");
+              box.value = (box.value ? box.value.replace(/\s*$/, "\n") : "") + path;
+              renderFormShots();
+            };
+
+            /* Signed in on the live site: the photo goes up with the place,
+               and there is nothing to commit. Otherwise it comes back as a
+               file to drop into images/trips/. */
+            if (Store.isRemote() && session.signedIn) {
+              note.textContent = "Uploading…";
+              return L.Photos.upload(out.blob).then(function (up) {
+                addPath(up.url);
+                note.innerHTML = "Uploaded — " + Math.round(out.bytes / 1024) +
+                  " KB, down from " + Math.round(out.from / 1024) + " KB. It's live.";
+              });
+            }
+
             L.Photos.download(out.blob, out.name);
-            var box = $("#f-photos");
-            box.value = (box.value ? box.value.replace(/\s*$/, "\n") : "") +
-              "images/trips/" + out.name;
-            renderFormShots();
+            addPath("images/trips/" + out.name);
             note.innerHTML = "Saved <code>" + esc(out.name) + "</code> — " +
               Math.round(out.bytes / 1024) + " KB, down from " +
               Math.round(out.from / 1024) + " KB. Put it in " +
@@ -1172,6 +1268,54 @@ window.LEGEND = window.LEGEND || {};
       }, Promise.resolve()).catch(function (err) {
         note.textContent = err.message || "That photo could not be used.";
       });
+    });
+
+    /* Sign in / sign out */
+    var login = $("#login");
+    function openLogin() {
+      login.hidden = false;
+      document.body.classList.add("is-locked");
+      $("#login-note").textContent =
+        "Only needed to add or change places. Everything else is public.";
+      $("#login-note").classList.remove("is-bad");
+      setTimeout(function () { $("#login-password").focus(); }, 30);
+    }
+    function closeLogin() {
+      login.hidden = true;
+      document.body.classList.remove("is-locked");
+      $("#login-password").value = "";
+    }
+    $("#signin").addEventListener("click", openLogin);
+    $("#login-close").addEventListener("click", closeLogin);
+    $("#login-cancel").addEventListener("click", closeLogin);
+    login.addEventListener("click", function (e) { if (e.target === login) closeLogin(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !login.hidden) closeLogin();
+    });
+    $("#login-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var note = $("#login-note"), go = $("#login-go");
+      go.disabled = true;
+      note.classList.remove("is-bad");
+      note.textContent = "Checking…";
+      signIn($("#login-password").value).then(function (out) {
+        go.disabled = false;
+        if (out && out.ok) {
+          closeLogin();
+          /* Re-read the live list: this browser may have been looking at a
+             cached copy, and the first thing an editor should see is the
+             truth they are about to change. */
+          Store.load();
+          return;
+        }
+        note.classList.add("is-bad");
+        note.textContent = (out && out.error) ||
+          (out && out.status === 429 ? "Too many tries. Wait fifteen minutes." :
+           "That didn't work. Try again.");
+      });
+    });
+    $("#signout").addEventListener("click", function () {
+      signOut().then(function () { Store.load(); });
     });
 
     /* Data management */
@@ -1234,7 +1378,7 @@ window.LEGEND = window.LEGEND || {};
       else window.addEventListener("load", register);
     }
 
-    Store.load();
+    Store.load().then(checkSession);
   }
 
   if (document.readyState === "loading") {

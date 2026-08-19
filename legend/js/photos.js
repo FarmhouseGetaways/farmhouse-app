@@ -126,9 +126,31 @@ window.LEGEND = window.LEGEND || {};
     document.body.classList.remove("is-locked");
   }
 
+  /* Send the resized bytes to the site's own photo endpoint. The server names
+     the file after a hash of its contents, so uploading the same picture
+     twice is free and the URL it returns can be cached for ever. */
+  function upload(blob) {
+    return fetch("/api/photo", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": blob.type || "image/jpeg" },
+      body: blob
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (out) {
+        if (!r.ok || !out.url) {
+          throw new Error(out.error ||
+            (r.status === 401 ? "Signed out — sign in again and retry."
+                              : "The upload failed (" + r.status + ")."));
+        }
+        return out;
+      });
+    });
+  }
+
   L.Photos = {
     resize: resize,
     download: download,
+    upload: upload,
 
     /* list: [{src, caption}] */
     open: function (list, index) {

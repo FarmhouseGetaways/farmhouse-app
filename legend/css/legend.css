@@ -860,3 +860,26 @@ body:not(.is-editing) .row__acts [data-del] { display: none !important; }
 }
 .editbar a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 body:not(.is-editing) .nav a[href="#data"] { display: none; }
+
+/* ---------------------------------------------------------------- sign in */
+
+.editbar__btn {
+  font: inherit; font-size: 12.5px; cursor: pointer; color: #fff;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 8px; padding: 3px 10px;
+}
+.editbar__btn:hover { background: rgba(255,255,255,.2); }
+
+.linkish {
+  font: inherit; font-size: 11px; color: var(--dimmer); background: none;
+  border: 0; padding: 0; cursor: pointer; text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.linkish:hover { color: var(--dim); }
+
+.dialog__box--narrow { width: min(400px, 100%); }
+.field__note.is-bad { color: #fb7185; }
+.notice.is-bad {
+  background: rgba(251, 113, 133, .1); border-color: rgba(251, 113, 133, .35);
+  color: #ffd7de;
+}

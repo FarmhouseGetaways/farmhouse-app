@@ -20,7 +20,7 @@
    activate, so nothing accumulates.
    ========================================================================== */
 
-var VERSION = "legend-v1";
+var VERSION = "legend-v2";
 
 var PRECACHE = [
   "./",
@@ -78,6 +78,12 @@ self.addEventListener("fetch", function (e) {
      be cached by the browser as normal. Caching them here would fill the
      quota with squares of ocean. */
   if (url.origin !== location.origin) return;
+
+  /* The API is never cached and never served from cache: a login, and the
+     live list of places. A stale answer from either is worse than an error.
+     Uploaded photos are content-addressed, so the browser's own cache handles
+     them correctly without help from here. */
+  if (url.pathname.indexOf("/api/") === 0 || url.pathname.indexOf("/photo/") === 0) return;
 
   if (url.pathname.indexOf("/data/") !== -1) {
     e.respondWith(

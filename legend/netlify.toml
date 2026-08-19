@@ -12,7 +12,38 @@
 
 [build]
   publish = "."
+  # No build step for the site itself — the HTML, CSS and JS in this folder
+  # are the site. Netlify still installs package.json so the functions can
+  # import @netlify/blobs.
   command = ""
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# The functions declare these paths themselves (`export const config`), and
+# these redirects declare them a second time. Belt and braces: if a build ever
+# lands on a runtime that ignores the in-function config, the endpoints still
+# resolve, and the site does not quietly fall back to read-only.
+[[redirects]]
+  from = "/api/auth"
+  to = "/.netlify/functions/auth"
+  status = 200
+
+[[redirects]]
+  from = "/api/places"
+  to = "/.netlify/functions/places"
+  status = 200
+
+[[redirects]]
+  from = "/api/photo"
+  to = "/.netlify/functions/photo"
+  status = 200
+
+[[redirects]]
+  from = "/photo/*"
+  to = "/.netlify/functions/photo/:splat"
+  status = 200
 
 [[headers]]
   for = "/*"
@@ -35,6 +66,13 @@
     Cache-Control = "public, max-age=0, must-revalidate"
 
 # The places file is the whole point. It must never be served stale.
+# The three endpoints. Never cached: one is a login, one is the live list of
+# places, and a stale answer from either is worse than a slow one.
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
 [[headers]]
   for = "/data/*"
   [headers.values]

@@ -1,23 +1,22 @@
 /* ==========================================================================
    The store — where places live.
 
-   There are two copies of the list and it is worth being clear about which
-   is which, because the whole editing story hangs on it:
+   Three copies of the list exist, and the whole editing story is about which
+   one is in charge:
 
-   1. THE PUBLISHED LIST — /data/places.json, committed to the repo. This is
-      what a stranger loading legenddzbinski.com sees.
-   2. THE WORKING COPY — localStorage, on the machine you added places from.
-      The moment you add, edit or delete anything, the working copy takes
-      over on that device and the published file is no longer read.
+   1. THE LIVE LIST — a Netlify Blob behind /api/places. When the site is
+      deployed with its functions this is the truth: signing in lets you write
+      to it, and everyone sees the change on their next load.
+   2. THE COMMITTED FILE — data/places.json. The floor under everything. The
+      function serves it when the Blob has never been written, so a wiped
+      store shows the last committed list rather than an empty map.
+   3. THE LOCAL COPY — localStorage. With a backend it is only a cache, so an
+      installed copy still shows something with no signal. Without a backend
+      it *is* the working copy, and publishing means downloading the JSON and
+      committing it, exactly as before.
 
-   The working copy is private to your browser. To make an addition public,
-   press "Download places.json" and commit the file over data/places.json —
-   the header shows an unsaved-changes badge until you do, so it can't be
-   forgotten quietly.
-
-   That is deliberately a static-site design: no login, no database, no
-   server to keep alive, nothing to leak. It also means clearing your browser
-   data throws away anything you never exported, so export early.
+   Which mode is in force is decided once, at load, by whether /api/places
+   answers. Nothing else in the page has to care.
    ========================================================================== */
 
 window.LEGEND = window.LEGEND || {};
@@ -27,6 +26,23 @@ window.LEGEND = window.LEGEND || {};
 
   var KEY = "legend.places.v1";
   var SOURCE = "data/places.json";
+  var API = "/api/places";
+
+  /* Two ways to run, decided at load time by whether /api/places answers:
+
+     LIVE — the site is on Netlify with its functions. The server holds the
+     list, signing in lets you write to it, and a save is visible to everyone
+     immediately. localStorage becomes a read-through cache so an installed
+     copy still shows something with no signal.
+
+     STATIC — a folder of files with no backend: opened locally, the
+     single-file preview, or a host without functions. Editing works, but it
+     writes to this browser only and publishing means committing places.json.
+
+     The page never has to ask which mode it is in for anything except the
+     words it uses to describe saving. */
+  var remote = false;
+  var lastServerError = null;
 
   /* Used if the published file is missing or the page is opened straight off
      disk (file:// blocks the fetch). One pin beats an empty world. */
@@ -101,7 +117,21 @@ window.LEGEND = window.LEGEND || {};
     listeners.forEach(function (fn) { fn(places); });
   }
 
+  var publishTimer = null;
+
   function persist() {
+    /* With a backend, saving is the point of pressing Save — there is no
+       second step to forget. The write is debounced only enough to collapse
+       a burst of edits into one request. */
+    if (remote) {
+      dirty = true;
+      cache(places);
+      emit();
+      clearTimeout(publishTimer);
+      publishTimer = setTimeout(function () { Store.publish(); }, 400);
+      return;
+    }
+
     try {
       localStorage.setItem(KEY, JSON.stringify(places));
       dirty = true;
@@ -120,22 +150,20 @@ window.LEGEND = window.LEGEND || {};
     emit();
   }
 
+  function cache(list) {
+    try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
+  }
+
+  function cached() {
+    try { return JSON.parse(localStorage.getItem(KEY) || "null"); }
+    catch (e) { return null; }
+  }
+
   var Store = {
 
     load: function () {
-      var saved = null;
-      try { saved = JSON.parse(localStorage.getItem(KEY) || "null"); }
-      catch (e) { saved = null; }
-
-      if (Array.isArray(saved)) {
-        places = cleanAll(saved).sort(byDate);
-        dirty = true;
-        emit();
-        return Promise.resolve(places);
-      }
-
-      /* The single-file preview build inlines the published list, because it
-         has no server to fetch it from. */
+      /* The single-file preview build inlines the list, because it has no
+         server and no sibling file to fetch. */
       if (L.INLINE_PLACES) {
         places = cleanAll(L.INLINE_PLACES).sort(byDate);
         dirty = false;
@@ -143,15 +171,71 @@ window.LEGEND = window.LEGEND || {};
         return Promise.resolve(places);
       }
 
-      return fetch(SOURCE, { cache: "no-store" })
-        .then(function (r) { return r.ok ? r.json() : FALLBACK; })
-        .catch(function () { return FALLBACK; })
-        .then(function (list) {
-          places = cleanAll(list).sort(byDate);
-          dirty = false;
-          emit();
-          return places;
+      return fetch(API, { cache: "no-store", credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; })
+        .then(function (payload) {
+          if (payload && Array.isArray(payload.places)) {
+            remote = true;
+            places = cleanAll(payload.places).sort(byDate);
+            dirty = false;
+            cache(places);
+            emit();
+            return places;
+          }
+
+          /* No backend. Fall back to the old behaviour: a working copy in
+             this browser if there is one, otherwise the committed file. */
+          var saved = cached();
+          if (Array.isArray(saved)) {
+            places = cleanAll(saved).sort(byDate);
+            dirty = true;
+            emit();
+            return places;
+          }
+          return fetch(SOURCE, { cache: "no-store" })
+            .then(function (r) { return r.ok ? r.json() : FALLBACK; })
+            .catch(function () {
+              /* Offline with a service worker but no cached response: the
+                 last list this browser saw is better than one lonely pin. */
+              return cached() || FALLBACK;
+            })
+            .then(function (list) {
+              places = cleanAll(list).sort(byDate);
+              dirty = false;
+              emit();
+              return places;
+            });
         });
+    },
+
+    isRemote: function () { return remote; },
+    lastError: function () { return lastServerError; },
+
+    /* Push the whole list to the server. Only reachable while signed in;
+       a 401 means the session has expired, which the page turns back into a
+       sign-in prompt rather than a lost edit. */
+    publish: function () {
+      if (!remote) return Promise.resolve({ ok: false, error: "no backend" });
+      return fetch(API, {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ places: places })
+      }).then(function (r) {
+        return r.json().catch(function () { return { ok: r.ok }; })
+          .then(function (out) {
+            out.status = r.status;
+            lastServerError = r.ok ? null : (out.error || "save failed");
+            if (r.ok) { dirty = false; cache(places); }
+            emit();
+            return out;
+          });
+      }).catch(function (err) {
+        lastServerError = err.message || "network error";
+        emit();
+        return { ok: false, error: lastServerError };
+      });
     },
 
     all: function () { return places.slice(); },
@@ -184,8 +268,10 @@ window.LEGEND = window.LEGEND || {};
       persist();
     },
 
-    /* Back to whatever is committed in data/places.json — the escape hatch
-       when a working copy has gone wrong. */
+    /* Throw away the local copy and take whatever the site has. With a
+       backend that means re-reading the live list; without one, the committed
+       places.json. Either way it is the escape hatch when a working copy has
+       gone wrong. */
     revert: function () {
       try { localStorage.removeItem(KEY); } catch (e) {}
       dirty = false;

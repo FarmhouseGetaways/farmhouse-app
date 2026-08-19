@@ -6,8 +6,11 @@ places that aren't on any continent at all.
 
 It is meant to live at **legenddzbinski.com**.
 
-It is plain HTML, CSS and JavaScript. No build step, no framework, no
-database, no login. Open `index.html` through any web server and it runs.
+It is plain HTML, CSS and JavaScript with no build step and no framework.
+Reading it needs nothing at all — open `index.html` through any web server and
+it runs. The only server-side thing on the whole site is writing: three small
+Netlify functions and a password, so places can be added from a phone and be
+live for everyone a second later.
 
     cd legend
     python3 -m http.server 8000
@@ -40,24 +43,40 @@ pin that counts for nothing — not a country, not a mile — until it happens
 and you change it to a visit. Counting a wish as a visit would make every
 number on the page a lie.
 
-Photos: press **Add a photo…** in the form. The browser shrinks the picture,
-hands you the file, and fills in the path. Drop that file into
-`legend/images/trips/`, commit it, and it appears in the map popups, the
-timeline and the photo wall. Several per place is fine.
+Photos: press **Add a photo…** in the form. The browser shrinks the picture
+first — a phone photo is four or five megabytes and comes out around three
+hundred kilobytes. Signed in on the live site it uploads and is live
+immediately. Without a backend it hands you the resized file and the path to
+drop it at, under `legend/images/trips/`. Several per place is fine, and they
+show in the map popups, the timeline and the photo wall.
 
-## Who sees the editor
+## Who can change it
 
-Visitors get a travel map. The *Add a place* button and the whole data
-section are hidden until edit mode is on, which is a URL away:
+Everything is public to read. Changing anything needs the password.
 
-    legenddzbinski.com/?edit      turn it on, and it sticks on that browser
-    legenddzbinski.com/?edit=0    turn it off again
+Press **Sign in to edit** at the bottom of the page, type the password, and
+the *Add a place* button and the data section appear. From then on every add,
+edit and delete goes straight to the site and is live for everyone — no
+downloading, no committing, no deploy. Photos upload too. **Sign out** puts
+it back.
 
-This is not a lock, and it would be dishonest to call it one — anyone can
-find it. It doesn't need to be a lock: nothing anyone does in their browser
-reaches anybody else, because publishing means committing a file to this
-repository. It just keeps the furniture out of the way for people who came
-to look at the map.
+How that works, in one paragraph: the password lives in a Netlify environment
+variable and is compared on the server. Signing in sets an `HttpOnly` session
+cookie — the page's own JavaScript cannot read it, and nor can anything else
+that ends up running on the page — which is a signed, expiring token, not the
+password. Every write checks that cookie server-side, so a visitor editing
+the page in their browser's dev tools changes what *they* see and nothing
+else. Ten wrong guesses from one address inside fifteen minutes and that
+address waits.
+
+If `LEGEND_PASSWORD` is not set, signing in is impossible and every write is
+refused: a misconfigured site is a read-only site, never an open one.
+
+**The `?edit` escape hatch** still exists for a copy with no backend — the
+single-file preview, or the folder opened locally. There, editing means this
+browser only and publishing means committing `data/places.json`, exactly as
+it did before. On the deployed site the server decides, and `?edit` does
+nothing.
 
 ## On a phone
 
@@ -68,51 +87,63 @@ works with no signal at all — the vector world stands in for the tiles, and
 every scoreboard, the globe and the editor keep working.
 
 The service worker (`sw.js`) serves the shell from cache and refreshes it in
-the background, with one deliberate exception: `data/places.json` goes to the
-network first. It is the file that changes, and a stale copy would silently
-hide a trip published this morning. Bump `VERSION` in `sw.js` when the file
-list changes.
+the background, with two deliberate exceptions. `data/places.json` goes to the
+network first, because it is a file that changes and a stale copy would hide a
+trip added this morning. And `/api/*` is never cached or served from cache at
+all — one of those is a login, and the other is the live list. Bump `VERSION`
+in `sw.js` when the file list changes.
 
-## Publishing what you added
+## Where the places actually live
 
-Everything you add is saved **in your browser only**. That is what makes the
-site free and serverless, and it is also the one thing to understand about it:
-until you publish, nobody else can see your new pins, and clearing your
-browser data would lose them.
+Three copies, and it is worth knowing which is in charge:
 
-To publish:
+1. **The live list** — stored by the site itself (a Netlify Blob), served by
+   `/api/places`. On the deployed site this is the truth. Signing in writes
+   to it; everyone else reads it.
+2. **`data/places.json`** — committed here, and the floor under everything.
+   The function serves it if the live list has never been written or gets
+   wiped, so the map can never come up empty.
+3. **Your browser** — a cache, so an installed copy still shows the last list
+   it saw with no signal.
 
-1. Scroll to **The list** at the bottom.
-2. Press **Download places.json**.
-3. Replace `legend/data/places.json` in this repo with the file you just
-   downloaded, and commit it.
-
-The next deploy shows those places to everyone. An amber banner sits in that
-section the whole time you have unpublished changes, so it is hard to forget.
-
-**Import JSON** goes the other way — load a `places.json` back in, which is
-how you move the list to a second computer or phone. **Revert to published**
-throws away the local copy and goes back to whatever is committed.
+**Download places.json** in the data section is now a backup rather than a
+publishing step: keep a copy, or commit it over `data/places.json` to move the
+floor up. **Import JSON** loads a file back in — with a backend that becomes
+the live list, so it is also how you'd restore one. **Revert** throws away
+local changes and re-reads whatever the site has.
 
 ## Deploying
 
-The folder is a complete static site, so it deploys as its own Netlify site,
-separate from the farmhouse app in the repo root:
+Its own Netlify site, separate from the farmhouse app in the repo root:
 
 1. Netlify → *Add new site* → *Import an existing project* → this repo.
 2. **Base directory:** `legend`
 3. **Build command:** leave empty
 4. **Publish directory:** `legend`
-5. Deploy, then *Domain management* → add `legenddzbinski.com` and follow
+5. **Environment variables** → add:
+
+       LEGEND_PASSWORD = whatever you want to type to edit the site
+
+   Optionally also `LEGEND_SESSION_SECRET` (any long random string). Without
+   it the signing key is derived from the password, which means changing the
+   password signs everyone out — usually what you want anyway.
+
+6. Deploy. Then *Domain management* → add `legenddzbinski.com` and follow
    Netlify's DNS instructions at the registrar.
 
-`legend/netlify.toml` carries the headers. The important one is that
-`data/places.json`, the CSS and the JS are all served `must-revalidate`: this
-site gets edited often, and nobody should have to hard-refresh to see a new
-pin.
+Netlify installs `package.json` and builds the three functions in
+`netlify/functions` automatically; there is no build step for the site itself.
+Blobs storage needs nothing turned on.
 
-Dropping the `legend` folder onto Netlify by hand works too — same result,
-minus the automatic redeploy when the repo changes.
+**A deploy must happen after setting the password.** Environment variables are
+read at function build time, so a site deployed before the variable existed
+stays read-only until it is redeployed.
+
+To change the password later: edit the variable, redeploy, and sign in again.
+
+Dropping the folder onto Netlify by hand still works, but only as a static
+site: no functions, so no signing in, and editing falls back to `?edit` and
+committing `data/places.json`.
 
 ## What is in here
 
@@ -137,6 +168,9 @@ minus the automatic redeploy when the repo changes.
     icons/                    GENERATED — app icons, from images/favicon.svg
     manifest.webmanifest      makes it installable
     sw.js                     offline cache
+
+    netlify/functions/        auth, places and photo — the only server there is
+    package.json              one dependency: @netlify/blobs, for the functions
 
     tools/build-usmap.mjs     regenerates js/usmap.js
     tools/build-worldmap.mjs  regenerates js/worldmap.js

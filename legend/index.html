@@ -28,10 +28,11 @@
 
 <a class="skip" href="#map-section">Skip to the map</a>
 
-<!-- Only shown in edit mode, which is turned on with ?edit in the URL. -->
+<!-- Shown while signed in, or in local edit mode on a site with no backend. -->
 <div class="editbar" id="editbar" hidden>
-  <span>Edit mode — you are the only one who sees your changes until you publish them.</span>
-  <a href="?edit=0">Leave edit mode</a>
+  <span id="editbar-text"></span>
+  <button type="button" id="signout" class="editbar__btn" hidden>Sign out</button>
+  <a href="?edit=0" id="leave-local" hidden>Leave edit mode</a>
 </div>
 
 <header class="head">
@@ -258,7 +259,29 @@
 <footer class="foot">
   <p>legenddzbinski.com — a map that grows.</p>
   <p class="foot__small">Map data © OpenStreetMap contributors, CARTO, Esri.</p>
+  <p class="foot__small"><button type="button" id="signin" class="linkish" hidden>Sign in to edit</button></p>
 </footer>
+
+<!-- ================= SIGN IN ================= -->
+<div class="dialog" id="login" hidden>
+  <div class="dialog__box dialog__box--narrow" role="dialog" aria-modal="true" aria-labelledby="login-title">
+    <div class="dialog__head">
+      <h2 id="login-title">Sign in</h2>
+      <button type="button" id="login-close" class="x" aria-label="Close">×</button>
+    </div>
+    <form id="login-form" class="form">
+      <label class="field">
+        <span class="field__label">Password</span>
+        <input type="password" id="login-password" autocomplete="current-password" required>
+      </label>
+      <p class="field__note" id="login-note">Only needed to add or change places. Everything else is public.</p>
+      <div class="form__acts">
+        <button type="submit" class="btn btn--go" id="login-go">Sign in</button>
+        <button type="button" id="login-cancel" class="btn btn--quiet">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- ================= ADD / EDIT DIALOG ================= -->
 <div class="dialog" id="dialog" hidden>
