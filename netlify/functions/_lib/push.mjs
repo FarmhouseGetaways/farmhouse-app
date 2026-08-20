@@ -32,15 +32,18 @@ function arm() {
 }
 
 /**
- * Send one payload to every stored subscription.
+ * Send one payload to stored subscriptions, optionally filtered.
  *
  * Returns { sent, gone, failed }. `gone` matters: a 404 or 410 from the push
  * service means that device uninstalled the app or cleared its data, and the
  * subscription is dead forever. Deleting them here is the only thing that
  * stops the list rotting into a pile of addresses that can never be delivered
  * to — which is how a push list quietly becomes useless.
+ *
+ * A filtered send still cleans up dead subscriptions it happens to touch, but
+ * only among the ones it was going to send to.
  */
-export async function sendToAll(payload) {
+async function send(payload, keep) {
   if (!configured()) return { sent: 0, gone: 0, failed: 0, reason: "VAPID keys are not set" };
   arm();
 
@@ -61,6 +64,7 @@ export async function sendToAll(payload) {
         sub = await store.get(b.key, { type: "json" });
       } catch (err) { return; }
       if (!sub || !sub.endpoint) return;
+      if (keep && !keep(sub)) return;
       try {
         await webpush.sendNotification(sub, body);
         sent++;
@@ -75,6 +79,30 @@ export async function sendToAll(payload) {
     }));
   }
   return { sent, gone, failed };
+}
+
+/** Everyone who installed the app. Stories, peaches, the things guests want. */
+export const sendToAll = (payload) => send(payload, null);
+
+/**
+ * Only the owners' own devices — the ones enrolled through the admin screen
+ * with the admin password.
+ *
+ * This exists because a form submission is not news for guests. Sending
+ * "someone submitted the contact form" to every installed phone would be a
+ * fast way to get the app deleted, and it would leak an enquirer's name to
+ * strangers. So owner alerts have their own audience, and the only way into
+ * it is to know the admin password.
+ */
+export async function sendToAdmins(payload) {
+  const result = await send(payload, (sub) => sub.admin === true);
+  if (!result.reason && result.sent === 0) {
+    // Worth saying out loud. The likeliest cause is that nobody has pressed
+    // "Send alerts to this phone" on the admin screen yet, and a silent zero
+    // looks identical to a working system with nothing to report.
+    result.reason = "no owner devices are enrolled — open the app's admin screen and turn alerts on";
+  }
+  return result;
 }
 
 /** Constant-time-ish compare, so the admin password cannot be guessed a

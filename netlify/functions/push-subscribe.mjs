@@ -1,5 +1,11 @@
 /**
  * POST /.netlify/functions/push-subscribe    { subscription, topics? }
+ * POST /.netlify/functions/push-subscribe    + header x-admin-key
+ *      marks this device as an OWNER device, which additionally receives form
+ *      submissions from the three sites. Guests can never do this: the flag is
+ *      set from the verified admin password on the request, never from
+ *      anything the page asks for, so nobody can enrol themselves into the
+ *      owners' alerts by editing a fetch in their console.
  * POST /.netlify/functions/push-subscribe?off=1   { endpoint }
  *
  * Stores (or removes) one device's push subscription.
@@ -10,7 +16,7 @@
  * somebody turns notifications off, the record is deleted outright rather than
  * flagged.
  */
-import { SUBS, keyFor, json } from "./_lib/push.mjs";
+import { SUBS, keyFor, json, secretOk } from "./_lib/push.mjs";
 
 export default async (req) => {
   if (req.method !== "POST") return json({ ok: false }, 405);
@@ -31,13 +37,23 @@ export default async (req) => {
   const sub = body.subscription;
   if (!sub || !sub.endpoint || !sub.keys) return json({ ok: false, error: "no subscription" }, 400);
 
-  await store.setJSON(await keyFor(sub.endpoint), {
+  // Trusted from the header, never from the body.
+  const admin = secretOk(req.headers.get("x-admin-key"));
+
+  const key = await keyFor(sub.endpoint);
+  // Re-subscribing happens on every app launch. Without this, an owner device
+  // would quietly lose its flag the next time the app opened.
+  let existing = null;
+  try { existing = await store.get(key, { type: "json" }); } catch (err) { /* new device */ }
+
+  await store.setJSON(key, {
     endpoint: sub.endpoint,
     keys: sub.keys,
     // Kept so a stale device can be aged out later, and so the admin screen can
     // say something more useful than a raw count.
-    added: new Date().toISOString(),
+    added: existing?.added || new Date().toISOString(),
+    ...(admin || existing?.admin ? { admin: true } : {}),
   });
 
-  return json({ ok: true, subscribed: true });
+  return json({ ok: true, subscribed: true, admin: Boolean(admin || existing?.admin) });
 };
