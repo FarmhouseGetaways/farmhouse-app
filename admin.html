@@ -132,8 +132,15 @@
             do, which is the point: an enquirer&rsquo;s name and message are not
             for a stranger&rsquo;s lock screen.</p>
           <p class="fine" id="enrol-state"><b>Checking this phone&hellip;</b></p>
-          <div class="btn-row"><button class="btn btn-go" id="enrol">Send alerts to this phone</button></div>
+          <p class="fine" id="owner-count"></p>
+          <div class="btn-row">
+            <button class="btn btn-go" id="enrol">Send alerts to this phone</button>
+            <button class="btn btn-line" id="test-alert">Send a test alert</button>
+          </div>
           <p class="fine" id="enrol-note"></p>
+          <p class="fine">The test goes down exactly the path a real form
+            submission takes, so if it arrives the app is doing its job and
+            anything still missing is on the website end.</p>
         </div>
       </div>
     </section>
@@ -202,6 +209,8 @@
     if (res.status === 401) { sessionStorage.removeItem(KEY); return false; }
     var d = await res.json();
     document.getElementById("subs").textContent = d.subscribers;
+      document.getElementById("owner-count").innerHTML =
+        (d.ownerDevices || 0) + " phone" + (d.ownerDevices === 1 ? "" : "s") + " enrolled for form submissions.";
     var c = d.configured || {};
     document.getElementById("checks").innerHTML =
       checkRow("Push keys (VAPID)", c.vapid, "Generate a pair and add VAPID_PUBLIC / VAPID_PRIVATE") +
@@ -393,6 +402,29 @@
     } finally {
       this.disabled = false;
     }
+  });
+
+  document.getElementById("test-alert").addEventListener("click", async function () {
+    var say = function (m) { note("enrol-note", m); };
+    this.disabled = true;
+    say("Sending…");
+    try {
+      var res = await api("push-alert", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: "Test alert",
+          body: "If you can read this, the app end of form alerts is working.",
+          site: "Test"
+        })
+      });
+      var d = await res.json();
+      if (!d.ok) { say("Refused: " + (d.error || res.status)); return; }
+      say(d.sent
+        ? "Sent to " + d.sent + " phone" + (d.sent === 1 ? "" : "s") + "."
+        : "Nothing to send to — " + (d.reason || "no owner devices are enrolled."));
+    } catch (err) { say("Could not reach the alert endpoint."); }
+    finally { this.disabled = false; }
   });
 
   refreshEnrol();
