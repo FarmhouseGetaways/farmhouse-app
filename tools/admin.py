@@ -73,6 +73,7 @@ ADMIN_BODY = f"""<div class="wrap sec" id="gate">
           <p class="fine">Only phones enrolled here receive them. Guests never
             do, which is the point: an enquirer&rsquo;s name and message are not
             for a stranger&rsquo;s lock screen.</p>
+          <p class="fine" id="enrol-state"><b>Checking this phone&hellip;</b></p>
           <div class="btn-row"><button class="btn btn-go" id="enrol">Send alerts to this phone</button></div>
           <p class="fine" id="enrol-note"></p>
         </div>
@@ -284,7 +285,7 @@ ADMIN_JS = """<script>
     }
   });
 
-  /* ---- owner alerts: enrol this phone ---- */
+  /* ---- owner alerts: enrol or un-enrol this phone ---- */
   function urlB64ToUint8Array(b64) {
     var pad = "=".repeat((4 - (b64.length % 4)) % 4);
     var base = (b64 + pad).replace(/-/g, "+").replace(/_/g, "/");
@@ -293,7 +294,39 @@ ADMIN_JS = """<script>
     return out;
   }
 
-  document.getElementById("enrol").addEventListener("click", async function () {
+  var enrolBtn   = document.getElementById("enrol");
+  var enrolState = document.getElementById("enrol-state");
+  var isEnrolled = false;
+
+  function paintEnrol(state) {
+    isEnrolled = state === "on";
+    enrolState.innerHTML = isEnrolled
+      ? "<b>This phone is enrolled.</b> It gets every form submission from all three sites."
+      : (state === "unknown"
+          ? "This phone is not enrolled."
+          : "This phone is <b>not</b> enrolled &mdash; it will not get form submissions.");
+    enrolBtn.textContent = isEnrolled ? "Stop alerts on this phone" : "Send alerts to this phone";
+  }
+
+  /* Ask the server what it actually knows about this device, rather than
+     assuming. Without this the button invited you to enrol every time, however
+     many times you already had. */
+  async function refreshEnrol() {
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) { paintEnrol("unknown"); return; }
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      if (!sub) { paintEnrol("off"); return; }
+      var res = await fetch("/.netlify/functions/push-subscribe?status=1", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ endpoint: sub.endpoint })
+      });
+      var d = await res.json();
+      paintEnrol(d.admin ? "on" : "off");
+    } catch (err) { paintEnrol("unknown"); }
+  }
+
+  enrolBtn.addEventListener("click", async function () {
     var say = function (m) { note("enrol-note", m); };
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
       say(/iPhone|iPad|iPod/.test(navigator.userAgent)
@@ -302,8 +335,25 @@ ADMIN_JS = """<script>
       return;
     }
     this.disabled = true;
-    say("Setting up…");
     try {
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+
+      if (isEnrolled && sub) {
+        say("Turning them off…");
+        var offRes = await api("push-subscribe?admin=off", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint })
+        });
+        var offD = await offRes.json();
+        if (offD.ok) {
+          paintEnrol("off");
+          say("Stopped. This phone still hears about new posts, just not form submissions.");
+        } else { say("That did not take. Check the password and try again."); }
+        return;
+      }
+
+      say("Setting up…");
       if (Notification.permission === "denied") {
         say("Notifications are blocked for this app in your browser settings. That has to be changed there first.");
         return;
@@ -311,8 +361,6 @@ ADMIN_JS = """<script>
       var perm = await Notification.requestPermission();
       if (perm !== "granted") { say("Not enrolled. You can turn this on any time."); return; }
 
-      var reg = await navigator.serviceWorker.ready;
-      var sub = await reg.pushManager.getSubscription();
       if (!sub) {
         var kr = await fetch("/.netlify/functions/push-key");
         var key = (await kr.json()).key;
@@ -325,20 +373,24 @@ ADMIN_JS = """<script>
       // Through api(), so the admin key rides along and the server marks this
       // device as an owner device. That flag is never taken from the body.
       var res = await api("push-subscribe", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
+        method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub })
       });
       var d = await res.json();
-      say(d.ok && d.admin
-        ? "Done. This phone will get every form submission from all three sites."
-        : "That did not take. Check the password and try again.");
+      if (d.ok && d.admin) {
+        paintEnrol("on");
+        say("Done. This phone will get every form submission from all three sites.");
+      } else {
+        say("That did not take. Check the password and try again.");
+      }
     } catch (err) {
       say("That did not work. Try again in a moment.");
     } finally {
       this.disabled = false;
     }
   });
+
+  refreshEnrol();
 
   /* ---- push ---- */
   document.getElementById("send").addEventListener("click", async function () {

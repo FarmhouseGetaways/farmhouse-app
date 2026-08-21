@@ -6,7 +6,14 @@
  *      set from the verified admin password on the request, never from
  *      anything the page asks for, so nobody can enrol themselves into the
  *      owners' alerts by editing a fetch in their console.
- * POST /.netlify/functions/push-subscribe?off=1   { endpoint }
+ * POST /.netlify/functions/push-subscribe?off=1        { endpoint }
+ *      forgets the device entirely.
+ * POST /.netlify/functions/push-subscribe?status=1     { endpoint }
+ *      read-only: answers { subscribed, admin } so a screen can show where
+ *      this device actually stands instead of guessing.
+ * POST /.netlify/functions/push-subscribe?admin=off    { endpoint } + key
+ *      stops the owner alerts on this device but keeps its ordinary
+ *      subscription, so it still hears when Carissa posts.
  *
  * Stores (or removes) one device's push subscription.
  *
@@ -24,8 +31,35 @@ export default async (req) => {
   let body = {};
   try { body = await req.json(); } catch (err) { return json({ ok: false, error: "bad json" }, 400); }
 
-  const off = new URL(req.url).searchParams.get("off");
+  const params = new URL(req.url).searchParams;
+  const off = params.get("off");
   const store = SUBS();
+
+  // Read-only. No key needed: it tells a device about itself and nothing else,
+  // and you have to already hold the endpoint to ask.
+  if (params.get("status")) {
+    const endpoint = body.endpoint || body?.subscription?.endpoint;
+    if (!endpoint) return json({ ok: false, error: "no endpoint" }, 400);
+    let rec = null;
+    try { rec = await store.get(await keyFor(endpoint), { type: "json" }); } catch (err) { /* unknown device */ }
+    return json({ ok: true, subscribed: Boolean(rec), admin: Boolean(rec?.admin) });
+  }
+
+  // Stop the owner alerts without unsubscribing. Needs the key, exactly as
+  // turning them on does — otherwise anyone holding an endpoint could switch
+  // off the owners' alerts.
+  if (params.get("admin") === "off") {
+    if (!secretOk(req.headers.get("x-admin-key"))) return json({ ok: false, error: "not authorised" }, 401);
+    const endpoint = body.endpoint || body?.subscription?.endpoint;
+    if (!endpoint) return json({ ok: false, error: "no endpoint" }, 400);
+    const key = await keyFor(endpoint);
+    let rec = null;
+    try { rec = await store.get(key, { type: "json" }); } catch (err) { /* nothing to do */ }
+    if (!rec) return json({ ok: true, subscribed: false, admin: false });
+    delete rec.admin;
+    await store.setJSON(key, rec);
+    return json({ ok: true, subscribed: true, admin: false });
+  }
 
   if (off) {
     const endpoint = body.endpoint || body?.subscription?.endpoint;
