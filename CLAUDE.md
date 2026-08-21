@@ -72,8 +72,38 @@ themselves. Re-subscribing on launch preserves it.
 Each form alert carries a unique tag: the service worker replaces notifications
 sharing a tag, which is right for the Story watcher and wrong for submissions.
 
-**The admin screen has no visible link.** Press and hold the title at the top
-of any screen for 750ms. `/admin` asks for the password regardless.
+**The admin screen has a visible link** — small, top right of the bar on every
+screen, `.bar-admin` in `build.py`. It was hidden behind a 750ms press-and-hold
+on the title until 21 Aug 2026; the owner asked for it plainly instead, and
+hiding it was never security anyway — `/admin` asks for the password regardless,
+which is the part that matters.
+
+## The inbox
+
+`admin-submissions` reads every form submission across all four Netlify sites
+and returns them in one list. Nothing is stored locally: **Dismiss writes a
+"handled" mark to a blob, it never deletes**, so a dismissed submission is still
+in Netlify Forms and still in this list. That was not obvious when everything
+sat in one list and a dealt-with card merely went grey, so the inbox has
+**Waiting / Dealt with / All** and opens on Waiting.
+
+Contact details are tap targets, not text: `value()` turns an email into a
+`mailto:` with the subject and greeting already filled in, a phone into `tel:`,
+a website into a link. **A web page cannot make mail send AS a chosen address** —
+`mailto:` opens whatever mail app the phone has, signed in as whatever account
+that app uses. If a reply must go out as minibarnmarket@gmail.com, that account
+has to be the mail app's default or picked from its From list.
+
+The farm stand card shows the owner's name, email and phone *in addition to*
+`preview`. `preview` deliberately withholds them because it is a picture of what
+goes on the public map — but they are the whole point of the inbox.
+
+**Download every contact (CSV)** builds the file in the browser from the list
+already on screen: no second endpoint to keep in step, nothing new to
+authorise. Columns are the union of every field any submission carries, so a
+form that gains a field later exports it with no edit here. It writes a UTF-8
+BOM, without which Excel mangles any accented name. This is what to import from
+if the list ever moves into EmailOctopus.
 
 `ASSET_HASH` versions the CSS and both scripts and is what the service worker
 precaches. It is computed from the files on disk at import time, before the
