@@ -103,6 +103,20 @@ button { font: inherit; }
   padding: .45rem .8rem; background: none; cursor: pointer;
 }
 
+/* The way in to the admin screen, on every page. Small and quiet — it is not
+   for guests and should not compete with anything — but visible, because a
+   hidden gesture is a thing you have to remember. /admin asks for the password
+   regardless, so nothing here is protecting anything. */
+.bar-right { display: inline-flex; align-items: center; gap: .5rem; }
+.bar-admin {
+  font-size: .58rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; text-decoration: none;
+  color: var(--mute);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: .32rem .6rem; opacity: .75;
+}
+.bar-admin:hover, .bar-admin:focus-visible { opacity: 1; color: var(--accent); }
+
 /* ---------- the tab bar ---------- */
 .tabs {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;

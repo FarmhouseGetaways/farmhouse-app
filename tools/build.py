@@ -168,7 +168,7 @@ def head(title, path, accent, extra_head=""):
 def bar(title, sub, action=""):
     return f"""<header class="bar">
   <div><p class="bar-title">{title}</p><p class="bar-sub">{sub}</p></div>
-  {action}
+  <div class="bar-right">{action}<a class="bar-admin" href="/admin">Admin</a></div>
 </header>
 <main id="main">
 """
@@ -779,49 +779,6 @@ APP_JS = """/* The app shell: service worker, offline state, install prompt. */
       });
     }
   }
-})();
-
-/* ---------------------------------------------------------------------------
-   The quiet way into the admin screen.
-
-   There is no visible button, on purpose. This app is installed on guests'
-   phones, and an "Admin" item in the tab bar or the icon's shortcut menu would
-   be a permanent invitation to press it. Instead: press and hold the title at
-   the top of any screen for three quarters of a second.
-
-   Nothing is secured by the obscurity — /admin asks for the password
-   regardless, and always will. This only keeps it out of a guest's way.
-   --------------------------------------------------------------------------- */
-(function () {
-  var title = document.querySelector(".bar-title");
-  if (!title) return;
-
-  var timer = null, moved = false;
-
-  function open() {
-    if (moved) return;
-    // A short buzz where the device can, so a deliberate long press is
-    // confirmed rather than feeling like a mis-tap.
-    if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
-    location.href = "/admin";
-  }
-  function start() { moved = false; clearTimeout(timer); timer = setTimeout(open, 750); }
-  function stop() { clearTimeout(timer); }
-  function drift() { moved = true; clearTimeout(timer); }
-
-  title.addEventListener("touchstart", start, { passive: true });
-  title.addEventListener("touchmove", drift, { passive: true });
-  title.addEventListener("touchend", stop);
-  title.addEventListener("touchcancel", stop);
-  title.addEventListener("mousedown", start);
-  title.addEventListener("mouseup", stop);
-  title.addEventListener("mouseleave", stop);
-
-  // Without these iOS answers a long press with the text-selection callout and
-  // the gesture never completes.
-  title.style.webkitUserSelect = "none";
-  title.style.userSelect = "none";
-  title.style.webkitTouchCallout = "none";
 })();
 
 """
