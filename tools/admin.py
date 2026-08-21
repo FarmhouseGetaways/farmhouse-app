@@ -63,6 +63,27 @@ ADMIN_BODY = f"""<div class="wrap sec" id="gate">
           <div class="btn-row"><button class="btn btn-go" id="send">Send to everyone</button></div>
           <p class="fine" id="send-note"></p>
         </div>
+
+        <div class="card card-pad" style="margin-top:1rem;">
+          <h2 class="mid">Form submissions to this phone</h2>
+          <p class="fine">Turn this on and this phone gets a notification the
+            moment somebody submits a form on any of the three sites &mdash; a
+            farm stand adding itself on Farmstand.TV, the contact form on Mini
+            Barn Market, an enquiry on Farmhouse Getaways.</p>
+          <p class="fine">Only phones enrolled here receive them. Guests never
+            do, which is the point: an enquirer&rsquo;s name and message are not
+            for a stranger&rsquo;s lock screen.</p>
+          <p class="fine" id="enrol-state"><b>Checking this phone&hellip;</b></p>
+          <p class="fine" id="owner-count"></p>
+          <div class="btn-row">
+            <button class="btn btn-go" id="enrol">Send alerts to this phone</button>
+            <button class="btn btn-line" id="test-alert">Send a test alert</button>
+          </div>
+          <p class="fine" id="enrol-note"></p>
+          <p class="fine">The test goes down exactly the path a real form
+            submission takes, so if it arrives the app is doing its job and
+            anything still missing is on the website end.</p>
+        </div>
       </div>
     </section>
 
@@ -183,12 +204,15 @@ ADMIN_JS = """<script>
     if (res.status === 401) { sessionStorage.removeItem(KEY); return false; }
     var d = await res.json();
     document.getElementById("subs").textContent = d.subscribers;
+      document.getElementById("owner-count").innerHTML =
+        (d.ownerDevices || 0) + " phone" + (d.ownerDevices === 1 ? "" : "s") + " enrolled for form submissions.";
     var c = d.configured || {};
     document.getElementById("checks").innerHTML =
       checkRow("Push keys (VAPID)", c.vapid, "Generate a pair and add VAPID_PUBLIC / VAPID_PRIVATE") +
       checkRow("Instagram token", c.instagram, "Needed for automatic push when Carissa posts") +
       checkRow("Admin password", c.adminPassword, "ADMIN_PASSWORD is not set") +
       checkRow("Netlify token", c.netlify, "NETLIFY_TOKEN \\u2014 needed for the inbox") +
+      checkRow("Alert key", c.alertKey, "ALERT_KEY \\u2014 lets the three websites send you form submissions") +
       checkRow("ntfy topic", c.ntfy, "Optional \\u2014 push straight to your own phone");
     gate.hidden = true; panel.hidden = false;
     return true;
@@ -270,6 +294,136 @@ ADMIN_JS = """<script>
       (a || d0).disabled = false;
     }
   });
+
+  /* ---- owner alerts: enrol or un-enrol this phone ---- */
+  function urlB64ToUint8Array(b64) {
+    var pad = "=".repeat((4 - (b64.length % 4)) % 4);
+    var base = (b64 + pad).replace(/-/g, "+").replace(/_/g, "/");
+    var raw = atob(base), out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  var enrolBtn   = document.getElementById("enrol");
+  var enrolState = document.getElementById("enrol-state");
+  var isEnrolled = false;
+
+  function paintEnrol(state) {
+    isEnrolled = state === "on";
+    enrolState.innerHTML = isEnrolled
+      ? "<b>This phone is enrolled.</b> It gets every form submission from all three sites."
+      : (state === "unknown"
+          ? "This phone is not enrolled."
+          : "This phone is <b>not</b> enrolled &mdash; it will not get form submissions.");
+    enrolBtn.textContent = isEnrolled ? "Stop alerts on this phone" : "Send alerts to this phone";
+  }
+
+  /* Ask the server what it actually knows about this device, rather than
+     assuming. Without this the button invited you to enrol every time, however
+     many times you already had. */
+  async function refreshEnrol() {
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) { paintEnrol("unknown"); return; }
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      if (!sub) { paintEnrol("off"); return; }
+      var res = await fetch("/.netlify/functions/push-subscribe?status=1", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ endpoint: sub.endpoint })
+      });
+      var d = await res.json();
+      paintEnrol(d.admin ? "on" : "off");
+    } catch (err) { paintEnrol("unknown"); }
+  }
+
+  enrolBtn.addEventListener("click", async function () {
+    var say = function (m) { note("enrol-note", m); };
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      say(/iPhone|iPad|iPod/.test(navigator.userAgent)
+        ? "On iPhone, add the app to your home screen first, then open this screen from there."
+        : "This browser cannot do notifications.");
+      return;
+    }
+    this.disabled = true;
+    try {
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+
+      if (isEnrolled && sub) {
+        say("Turning them off…");
+        var offRes = await api("push-subscribe?admin=off", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint })
+        });
+        var offD = await offRes.json();
+        if (offD.ok) {
+          paintEnrol("off");
+          say("Stopped. This phone still hears about new posts, just not form submissions.");
+        } else { say("That did not take. Check the password and try again."); }
+        return;
+      }
+
+      say("Setting up…");
+      if (Notification.permission === "denied") {
+        say("Notifications are blocked for this app in your browser settings. That has to be changed there first.");
+        return;
+      }
+      var perm = await Notification.requestPermission();
+      if (perm !== "granted") { say("Not enrolled. You can turn this on any time."); return; }
+
+      if (!sub) {
+        var kr = await fetch("/.netlify/functions/push-key");
+        var key = (await kr.json()).key;
+        if (!key) { say("Push is not switched on for this app yet — the VAPID keys are missing."); return; }
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlB64ToUint8Array(key)
+        });
+      }
+      // Through api(), so the admin key rides along and the server marks this
+      // device as an owner device. That flag is never taken from the body.
+      var res = await api("push-subscribe", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub })
+      });
+      var d = await res.json();
+      if (d.ok && d.admin) {
+        paintEnrol("on");
+        say("Done. This phone will get every form submission from all three sites.");
+      } else {
+        say("That did not take. Check the password and try again.");
+      }
+    } catch (err) {
+      say("That did not work. Try again in a moment.");
+    } finally {
+      this.disabled = false;
+    }
+  });
+
+  document.getElementById("test-alert").addEventListener("click", async function () {
+    var say = function (m) { note("enrol-note", m); };
+    this.disabled = true;
+    say("Sending…");
+    try {
+      var res = await api("push-alert", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: "Test alert",
+          body: "If you can read this, the app end of form alerts is working.",
+          site: "Test"
+        })
+      });
+      var d = await res.json();
+      if (!d.ok) { say("Refused: " + (d.error || res.status)); return; }
+      say(d.sent
+        ? "Sent to " + d.sent + " phone" + (d.sent === 1 ? "" : "s") + "."
+        : "Nothing to send to — " + (d.reason || "no owner devices are enrolled."));
+    } catch (err) { say("Could not reach the alert endpoint."); }
+    finally { this.disabled = false; }
+  });
+
+  refreshEnrol();
 
   /* ---- push ---- */
   document.getElementById("send").addEventListener("click", async function () {

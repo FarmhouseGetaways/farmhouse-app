@@ -12,21 +12,33 @@ import { SUBS, STATE, secretOk, json } from "./_lib/push.mjs";
 export default async (req) => {
   if (!secretOk(req.headers.get("x-admin-key"))) return json({ ok: false }, 401);
 
-  let subs = 0, newest = null;
+  let subs = 0, owners = 0, newest = null;
   try {
-    const { blobs } = await SUBS().list();
+    const store = SUBS();
+    const { blobs } = await store.list();
     subs = blobs.length;
+    // Count the owner devices too. "Enrolled but no alerts arriving" is the
+    // hardest state to diagnose from outside, and a number on the screen
+    // settles instantly whether the enrolment took.
+    for (const b of blobs) {
+      try {
+        const rec = await store.get(b.key, { type: "json" });
+        if (rec?.admin) owners++;
+      } catch (err) { /* skip a record we cannot read */ }
+    }
   } catch (err) { /* store may not exist until the first subscriber */ }
   try { newest = await STATE().get("last-post-id"); } catch (err) {}
 
   return json({
     ok: true,
     subscribers: subs,
+    ownerDevices: owners,
     lastAnnouncedPost: newest,
     configured: {
       vapid: Boolean(process.env.VAPID_PUBLIC && process.env.VAPID_PRIVATE),
       instagram: Boolean(process.env.IG_TOKEN),
       adminPassword: Boolean(process.env.ADMIN_PASSWORD),
+      alertKey: Boolean(process.env.ALERT_KEY),
       netlify: Boolean(process.env.NETLIFY_TOKEN),
       ntfy: Boolean(process.env.NTFY_TOPIC),
     },
