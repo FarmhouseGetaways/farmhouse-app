@@ -1,0 +1,16 @@
+[
+  {
+    "id": "p_home",
+    "name": "Ramona, California",
+    "kind": "home",
+    "country": "US",
+    "state": "CA",
+    "realm": "",
+    "lat": 33.03,
+    "lng": -116.87,
+    "date": "",
+    "notes": "Home base. Every trip starts and ends here.",
+    "fav": true,
+    "photos": []
+  }
+]
