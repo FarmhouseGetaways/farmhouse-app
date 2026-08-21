@@ -42,8 +42,24 @@ ADMIN_BODY = f"""<div class="wrap sec" id="gate">
 
     <!-- ---------------------------------------------------------------- -->
     <section class="pane is-on" id="pane-inbox">
+      <!-- Dismissing has never deleted anything, but with everything in one
+           list a dealt-with card just went grey and looked lost. These say
+           where it went. -->
+      <nav class="adm-filters" id="inbox-filters">
+        <button class="adm-filter is-on" data-show="waiting">Waiting</button>
+        <button class="adm-filter" data-show="done">Dealt with</button>
+        <button class="adm-filter" data-show="all">All</button>
+      </nav>
       <p class="fine" id="inbox-note">Loading&hellip;</p>
       <div id="inbox"></div>
+      <div class="btn-row" style="margin-top:1rem;">
+        <button class="btn btn-line" id="export">Download every contact (CSV)</button>
+      </div>
+      <p class="fine">Every submission from all three sites, dealt with or not,
+        as a spreadsheet &mdash; names, emails, phone numbers and what they
+        wrote. Opens in Numbers, Excel or Sheets, and is what to import from if
+        the list ever moves into EmailOctopus.</p>
+      <p class="fine" id="export-note"></p>
     </section>
 
     <!-- ---------------------------------------------------------------- -->
@@ -132,7 +148,7 @@ ADMIN_CSS = """<style>
     border: 1px solid var(--line); border-radius: var(--radius);
     background: var(--night-2); padding: 1rem 1.1rem; margin-bottom: .8rem;
   }
-  .sub.done { opacity: .45; }
+  .sub.done { opacity: .6; }
   .sub-top {
     display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap;
     margin-bottom: .5rem;
@@ -149,7 +165,21 @@ ADMIN_CSS = """<style>
     color: var(--mute-2); padding-top: .18rem;
   }
   .sub dd { margin: 0; font-size: .88rem; color: var(--mute); word-break: break-word; }
+  /* A contact detail is a tap target. Underlined so it reads as one, and given
+     a bit of height so it can actually be hit with a thumb. */
+  .sub dd a {
+    color: var(--accent); text-decoration: underline; text-underline-offset: 3px;
+    display: inline-block; padding: .15rem 0;
+  }
+  .sub dl + dl { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--line); }
   .sub .btn { padding: .7rem 1.1rem; font-size: .64rem; }
+  .adm-filters { display: flex; gap: .4rem; margin: 0 0 .8rem; flex-wrap: wrap; }
+  .adm-filter {
+    background: none; border: 1px solid var(--line); color: var(--mute-2);
+    border-radius: 999px; padding: .35rem .8rem; cursor: pointer;
+    font-size: .6rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  }
+  .adm-filter.is-on { border-color: var(--accent); color: var(--accent); }
   .warn { color: var(--mbm-red); }
   .good { color: var(--fstv); }
 </style>"""
@@ -160,6 +190,7 @@ ADMIN_JS = """<script>
   var gate = document.getElementById("gate");
   var panel = document.getElementById("panel");
   var cache = [];
+  var show = "waiting";   // which inbox filter is on
 
   function key() { return sessionStorage.getItem(KEY) || ""; }
   function note(id, msg) { var el = document.getElementById(id); if (el) el.textContent = msg; }
@@ -219,6 +250,47 @@ ADMIN_JS = """<script>
   }
 
   /* ---- inbox ---- */
+
+  /**
+   * A contact detail is something you act on, not something you read out and
+   * type back in. On a phone that means the value itself is the button: the
+   * email opens a reply already addressed and with a subject on it, the number
+   * dials, the website opens.
+   *
+   * The reply is a plain mailto:, so it opens whatever mail app the phone
+   * already has, signed in as whichever account that app uses. There is no way
+   * from a web page to force it to send AS a particular address — if it must
+   * go out as minibarnmarket@gmail.com then that account has to be the one the
+   * mail app is set to, or picked from its From list once the draft is open.
+   */
+  function replyTo(address, s) {
+    var subject = "Re: your message to " + (s.site || "us");
+    if (s.form === "farmstand") subject = "Re: your farm stand on the Ramona map";
+    var name = (s.data && (s.data["first-name"] || s.data["owner-first"] || s.data.name)) || "";
+    var body = "Hi " + String(name).split(" ")[0] + ",\\n\\n";
+    return "mailto:" + encodeURIComponent(address) +
+           "?subject=" + encodeURIComponent(subject) +
+           "&body=" + encodeURIComponent(body);
+  }
+
+  /** The value as a link when it is worth tapping, plain text otherwise. */
+  function value(key, raw, s) {
+    var v = String(raw == null ? "" : raw).trim();
+    if (!v) return "";
+    var k = String(key).toLowerCase();
+    if (k.indexOf("email") > -1 && v.indexOf("@") > -1) {
+      return '<a href="' + esc(replyTo(v, s)) + '">' + esc(v) + '</a>';
+    }
+    if (k.indexOf("phone") > -1 || k.indexOf("tel") > -1) {
+      return '<a href="tel:' + esc(v.replace(/[^0-9+]/g, "")) + '">' + esc(v) + '</a>';
+    }
+    if (k === "url" || k.indexOf("website") > -1) {
+      var href = /^https?:/i.test(v) ? v : "https://" + v;
+      return '<a href="' + esc(href) + '" target="_blank" rel="noopener">' + esc(v) + '</a>';
+    }
+    return esc(v);
+  }
+
   function card(s) {
     var p = s.preview;
     var rows = "";
@@ -228,13 +300,26 @@ ADMIN_JS = """<script>
         (p.address ? '<dt>Address</dt><dd>' + esc(p.address) + '</dd>' : '') +
         (p.hours   ? '<dt>Hours</dt><dd>'   + esc(p.hours)   + '</dd>' : '') +
         (p.sells   ? '<dt>Sells</dt><dd>'   + esc(p.sells)   + '</dd>' : '') +
-        (p.url     ? '<dt>Website</dt><dd>' + esc(p.url)     + '</dd>' : '') +
+        (p.url     ? '<dt>Website</dt><dd>' + value("url", p.url, s) + '</dd>' : '') +
         '</dl>';
+      // The preview deliberately withholds the owner's contact details,
+      // because it is a picture of what goes on the public map. They are the
+      // whole point of the inbox, though, so they come back here.
+      var reach = ["owner-first", "owner-last", "email", "phone"].filter(function (k) {
+        return s.data && String(s.data[k] || "").trim();
+      });
+      if (reach.length) {
+        rows += '<dl>' + reach.map(function (k) {
+          return '<dt>' + esc(k.replace(/[-_]/g, " ")) + '</dt><dd>' +
+                 value(k, s.data[k], s) + '</dd>';
+        }).join("") + '</dl>';
+      }
     } else {
       rows = '<dl>' + Object.keys(s.data || {}).filter(function (k) {
         return k !== "form-name" && String(s.data[k]).trim();
       }).map(function (k) {
-        return '<dt>' + esc(k.replace(/[-_]/g, " ")) + '</dt><dd>' + esc(s.data[k]) + '</dd>';
+        return '<dt>' + esc(k.replace(/[-_]/g, " ")) + '</dt><dd>' +
+               value(k, s.data[k], s) + '</dd>';
       }).join("") + '</dl>';
     }
 
@@ -244,8 +329,18 @@ ADMIN_JS = """<script>
         (p ? '<button class="btn btn-go" data-approve="' + esc(s.id) + '">Approve &rarr; map</button>' : '') +
         '<button class="btn btn-line" data-dismiss="' + esc(s.id) + '">Dismiss</button></div>';
 
+    // Who it is from, not what kind of form it was — the form name is already
+    // on the badge to the right, and "group-inquiry" tells you nothing you can
+    // act on. A farm stand is headed by the stand.
+    var d = s.data || {};
+    var title = (p && p.name) ||
+      [d["first-name"], d["last-name"]].filter(Boolean).join(" ").trim() ||
+      d.name || d["stand-name"] ||
+      [d["owner-first"], d["owner-last"]].filter(Boolean).join(" ").trim() ||
+      d.email || s.form || "Submission";
+
     return '<div class="sub' + (s.handled ? " done" : "") + '" id="sub-' + esc(s.id) + '">' +
-      '<div class="sub-top"><b>' + esc(p ? p.name : (s.form || "Submission")) + '</b>' +
+      '<div class="sub-top"><b>' + esc(title) + '</b>' +
       '<span class="sub-where">' + esc(s.site) + " / " + esc(s.form || "?") + '</span>' +
       '<span class="sub-when">' + esc(when(s.at)) + '</span></div>' +
       rows + actions + '<p class="fine" id="r-' + esc(s.id) + '"></p></div>';
@@ -261,13 +356,84 @@ ADMIN_JS = """<script>
       return;
     }
     cache = d.submissions || [];
-    var pending = cache.filter(function (s) { return !s.handled; }).length;
-    document.getElementById("pending").textContent = pending;
-    note("inbox-note", cache.length
-      ? pending + " waiting, " + (cache.length - pending) + " dealt with"
-      : "Nothing has come in yet.");
-    document.getElementById("inbox").innerHTML = cache.map(card).join("");
+    paintInbox();
   }
+
+  function paintInbox() {
+    var pending = cache.filter(function (s) { return !s.handled; }).length;
+    var done = cache.length - pending;
+    document.getElementById("pending").textContent = pending;
+
+    var shown = cache.filter(function (s) {
+      return show === "all" || (show === "done" ? s.handled : !s.handled);
+    });
+
+    note("inbox-note", cache.length
+      ? pending + " waiting, " + done + " dealt with"
+      : "Nothing has come in yet.");
+
+    document.getElementById("inbox").innerHTML = shown.length
+      ? shown.map(card).join("")
+      : '<p class="fine">' + (show === "done"
+          ? "Nothing has been dealt with yet."
+          : show === "waiting"
+            ? "Nothing waiting. Everything that came in has been dealt with."
+            : "Nothing has come in yet.") + '</p>';
+  }
+
+  document.getElementById("inbox-filters").addEventListener("click", function (e) {
+    var b = e.target.closest(".adm-filter");
+    if (!b) return;
+    [].forEach.call(document.querySelectorAll(".adm-filter"), function (t) {
+      t.classList.remove("is-on");
+    });
+    b.classList.add("is-on");
+    show = b.dataset.show;
+    paintInbox();
+  });
+
+  /* ---- every contact, as a spreadsheet ----
+     Built here rather than server-side because the inbox is already loaded:
+     the file is the list on screen, so there is no second endpoint to keep in
+     step and nothing new to authorise. */
+  function csvCell(v) {
+    var s = String(v == null ? "" : v);
+    return /[",\\n\\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  document.getElementById("export").addEventListener("click", function () {
+    if (!cache.length) { note("export-note", "Nothing to export yet."); return; }
+
+    // Union of every field any submission carries, so a form that gains a
+    // field later still exports it without this being edited.
+    var seen = {}, fields = [];
+    cache.forEach(function (s) {
+      Object.keys(s.data || {}).forEach(function (k) {
+        if (k === "form-name" || k === "bot-field" || k === "company") return;
+        if (!seen[k]) { seen[k] = true; fields.push(k); }
+      });
+    });
+
+    var head = ["When", "Site", "Form", "Dealt with"].concat(fields);
+    var rows = cache.map(function (s) {
+      return [s.at || "", s.site || "", s.form || "", s.handled ? "yes" : "no"]
+        .concat(fields.map(function (k) { return (s.data || {})[k] || ""; }))
+        .map(csvCell).join(",");
+    });
+
+    // The BOM is what makes Excel read it as UTF-8 rather than mangling any
+    // name with an accent in it.
+    var blob = new Blob(["\\ufeff" + [head.map(csvCell).join(",")].concat(rows).join("\\r\\n")],
+                        { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "contacts-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+    note("export-note", cache.length + " submissions, " + fields.length + " fields.");
+  });
 
   document.getElementById("inbox").addEventListener("click", async function (e) {
     var a = e.target.closest("[data-approve]"), d0 = e.target.closest("[data-dismiss]");
