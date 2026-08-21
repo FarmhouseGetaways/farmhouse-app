@@ -129,8 +129,8 @@
             farm stand adding itself on Farmstand.TV, the contact form on Mini
             Barn Market, an enquiry on Farmhouse Getaways.</p>
           <p class="fine">Only phones enrolled here receive them. Guests never
-            do, which is the point: their names and messages are not for a
-            stranger&rsquo;s lock screen.</p>
+            do, which is the point: an enquirer&rsquo;s name and message are not
+            for a stranger&rsquo;s lock screen.</p>
           <div class="btn-row"><button class="btn btn-go" id="enrol">Send alerts to this phone</button></div>
           <p class="fine" id="enrol-note"></p>
         </div>
@@ -307,7 +307,7 @@
       return;
     }
     this.disabled = true;
-    say("Setting up\u2026");
+    say("Setting up…");
     try {
       if (Notification.permission === "denied") {
         say("Notifications are blocked for this app in your browser settings. That has to be changed there first.");
@@ -321,7 +321,7 @@
       if (!sub) {
         var kr = await fetch("/.netlify/functions/push-key");
         var key = (await kr.json()).key;
-        if (!key) { say("Push is not switched on for this app yet \u2014 the VAPID keys are missing."); return; }
+        if (!key) { say("Push is not switched on for this app yet — the VAPID keys are missing."); return; }
         sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlB64ToUint8Array(key)
