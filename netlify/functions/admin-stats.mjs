@@ -38,6 +38,7 @@ export default async (req) => {
       vapid: Boolean(process.env.VAPID_PUBLIC && process.env.VAPID_PRIVATE),
       instagram: Boolean(process.env.IG_TOKEN),
       adminPassword: Boolean(process.env.ADMIN_PASSWORD),
+      alertKey: Boolean(process.env.ALERT_KEY),
       netlify: Boolean(process.env.NETLIFY_TOKEN),
       ntfy: Boolean(process.env.NTFY_TOPIC),
     },

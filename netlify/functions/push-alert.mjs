@@ -1,6 +1,6 @@
 /**
  * POST /.netlify/functions/push-alert
- * Header: x-admin-key: <ADMIN_PASSWORD>
+ * Header: x-admin-key: <ALERT_KEY>
  * Body:   { title, body?, url?, site?, form?, data? }
  *
  * An alert for the owners only — it goes to devices enrolled through the admin
@@ -15,7 +15,18 @@
  *   farmhousegetaways     group inquiries and mailing-list signups
  *
  * They post with ALERT_WEBHOOK set to this URL and ALERT_WEBHOOK_KEY set to the
- * same ADMIN_PASSWORD this function checks.
+ * same value as ALERT_KEY here.
+ *
+ * WHY ALERT_KEY AND NOT ADMIN_PASSWORD
+ * This was originally the admin password, and that was a bad idea. Three
+ * separate websites would each have had to hold the one credential that also
+ * opens the admin screen and the send-to-everyone button — so a leak from any
+ * one of them would let a stranger push to every phone that installed the app.
+ * ALERT_KEY is its own secret and can do exactly one thing: cause a
+ * notification to the owners' own devices.
+ *
+ * If ALERT_KEY is not set it falls back to ADMIN_PASSWORD, so nothing breaks
+ * in the gap between deploying this and setting it. Set it, though.
  *
  * WHY NOT push-send
  * push-send goes to everyone who installed the app. "Someone submitted the
@@ -28,7 +39,37 @@
  * Netlify retry, and a retry announces the same submission twice. The outcome
  * is reported in the body instead, which is what lands in that site's log.
  */
-import { sendToAdmins, secretOk, json } from "./_lib/push.mjs";
+import { sendToAdmins, json } from "./_lib/push.mjs";
+
+/** Constant time, so a key cannot be guessed a character at a time. */
+function matches(given, want) {
+  if (!want) return false;
+  const a = new TextEncoder().encode(String(given || ""));
+  const b = new TextEncoder().encode(want);
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
+/**
+ * EITHER key opens this door, and that is deliberate.
+ *
+ * ALERT_KEY is what the three websites hold — a credential that can do this
+ * one thing and nothing else. ADMIN_PASSWORD also works because the admin
+ * screen's own "Send a test alert" button is signed with it, and that button
+ * is how a person checks the chain without touching a website. Accepting only
+ * ALERT_KEY would break the test the moment ALERT_KEY was set, which is
+ * exactly when somebody would want to run it.
+ *
+ * Checking both is not a weakening: it is the difference between "the app's
+ * owner may do this" and "three websites each hold the app's master key",
+ * which is the arrangement this replaced.
+ */
+function alertKeyOk(given) {
+  return matches(given, (process.env.ALERT_KEY || "").trim())
+      || matches(given, (process.env.ADMIN_PASSWORD || "").trim());
+}
 
 /**
  * Every alert gets its OWN tag.
@@ -47,7 +88,7 @@ function tagFor(site) {
 
 export default async (req) => {
   if (req.method !== "POST") return json({ ok: false, error: "use POST" }, 405);
-  if (!secretOk(req.headers.get("x-admin-key"))) return json({ ok: false, error: "not authorised" }, 401);
+  if (!alertKeyOk(req.headers.get("x-admin-key"))) return json({ ok: false, error: "not authorised" }, 401);
 
   let body = {};
   try { body = await req.json(); } catch (err) { return json({ ok: false, error: "bad json" }, 400); }

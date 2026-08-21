@@ -212,6 +212,7 @@ ADMIN_JS = """<script>
       checkRow("Instagram token", c.instagram, "Needed for automatic push when Carissa posts") +
       checkRow("Admin password", c.adminPassword, "ADMIN_PASSWORD is not set") +
       checkRow("Netlify token", c.netlify, "NETLIFY_TOKEN \\u2014 needed for the inbox") +
+      checkRow("Alert key", c.alertKey, "ALERT_KEY \\u2014 lets the three websites send you form submissions") +
       checkRow("ntfy topic", c.ntfy, "Optional \\u2014 push straight to your own phone");
     gate.hidden = true; panel.hidden = false;
     return true;
