@@ -1,0 +1,104 @@
+# legenddzbinski.com — its own Netlify site.
+#
+# This folder is a complete static site. Point a *second* Netlify site at this
+# repo with the base directory set to `legend`, and Netlify reads this file
+# instead of the one in the repo root (which belongs to the farmhouse app).
+#
+#   Base directory:     legend
+#   Build command:      (leave empty — there is no build step)
+#   Publish directory:  legend
+#
+# Nothing here is generated: the HTML, CSS and JS in this folder are the site.
+
+[build]
+  publish = "."
+  # No build step for the site itself — the HTML, CSS and JS in this folder
+  # are the site. Netlify still installs package.json so the functions can
+  # import @netlify/blobs.
+  command = ""
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# The functions declare these paths themselves (`export const config`), and
+# these redirects declare them a second time. Belt and braces: if a build ever
+# lands on a runtime that ignores the in-function config, the endpoints still
+# resolve, and the site does not quietly fall back to read-only.
+[[redirects]]
+  from = "/api/auth"
+  to = "/.netlify/functions/auth"
+  status = 200
+
+[[redirects]]
+  from = "/api/places"
+  to = "/.netlify/functions/places"
+  status = 200
+
+[[redirects]]
+  from = "/api/photo"
+  to = "/.netlify/functions/photo"
+  status = 200
+
+[[redirects]]
+  from = "/photo/*"
+  to = "/.netlify/functions/photo/:splat"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+
+# Fingerprint-free assets that change with the site, so they are revalidated
+# rather than pinned for a year — a travel map gets edited often and nobody
+# should have to hard-refresh to see a new pin.
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# The places file is the whole point. It must never be served stale.
+# The three endpoints. Never cached: one is a login, one is the live list of
+# places, and a stale answer from either is worse than a slow one.
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Type = "application/json; charset=utf-8"
+
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+# The service worker must never be cached, or a deploy cannot reach a phone
+# that already installed the site — it would keep serving yesterday's copy
+# for ever. Same for the manifest.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Type = "application/manifest+json"

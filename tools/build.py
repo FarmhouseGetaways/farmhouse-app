@@ -73,7 +73,15 @@ MBM_DIR_A = "https://maps.apple.com/?daddr=33.0217514,-116.9316667&dirflg=d"
 RBR_ID = "813711"
 MR_ID  = "813713"
 
-CSS_HASH = hashlib.sha1((ROOT / "css/app.css").read_bytes()).hexdigest()[:8]
+# Covers the stylesheet AND both scripts, because this one hash versions all
+# three (/css/app.css?v=, /js/app.js?v=, /js/map.js?v=) and is what the service
+# worker precaches. Hashing the CSS alone meant a JavaScript change never
+# reached a phone that already had the app: same URL, still in the cache, never
+# fetched again. A silent staleness bug of exactly the kind netlify.toml warns
+# about for sw.js.
+ASSET_HASH = hashlib.sha1(b"".join(
+    (ROOT / f).read_bytes() for f in ("css/app.css", "js/app.js", "js/map.js")
+)).hexdigest()[:8]
 
 # ICON_HASH exists because /icons/* is served `immutable, max-age=31536000`.
 # That header is right — icons are big and almost never change — but it means
@@ -148,7 +156,7 @@ def head(title, path, accent, extra_head=""):
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v={ICON_HASH}">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png?v={ICON_HASH}">
 {FONTS}
-<link rel="stylesheet" href="/css/app.css?v={CSS_HASH}">
+<link rel="stylesheet" href="/css/app.css?v={ASSET_HASH}">
 <style>:root {{ --accent: {accent}; }}</style>
 {extra_head}
 </head>
@@ -160,7 +168,7 @@ def head(title, path, accent, extra_head=""):
 def bar(title, sub, action=""):
     return f"""<header class="bar">
   <div><p class="bar-title">{title}</p><p class="bar-sub">{sub}</p></div>
-  {action}
+  <div class="bar-right">{action}<a class="bar-admin" href="/admin">Admin</a></div>
 </header>
 <main id="main">
 """
@@ -182,7 +190,7 @@ def shell(slug, title, sub, body, action="", extra_head="", extra_body=""):
     html = (head(title, path, accent, extra_head)
             + bar(title if slug != "index" else APP_NAME, sub, action)
             + body + tabs(slug) + extra_body
-            + '<script src="/js/app.js?v=' + CSS_HASH + '"></script>\n</body>\n</html>\n')
+            + '<script src="/js/app.js?v=' + ASSET_HASH + '"></script>\n</body>\n</html>\n')
     return html
 
 
@@ -302,7 +310,7 @@ def page_map():
 """
     return shell("map", "The Map", "Farm stands around Ramona", body,
                  extra_head=MAP_HEAD,
-                 extra_body='<script src="/js/map.js?v=%s"></script>\n' % CSS_HASH)
+                 extra_body='<script src="/js/map.js?v=%s"></script>\n' % ASSET_HASH)
 
 
 # ---------------------------------------------------------------------------
@@ -1032,7 +1040,7 @@ def page_install():
     return (head("Install the app", "/install", "var(--mbm)", INSTALL_CSS)
             + bar("Install", "Farmhouse Getaways")
             + INSTALL_BODY + tabs("") + INSTALL_JS
-            + '<script src="/js/app.js?v=' + CSS_HASH + '"></script>\n</body>\n</html>\n')
+            + '<script src="/js/app.js?v=' + ASSET_HASH + '"></script>\n</body>\n</html>\n')
 
 
 def page_admin():
@@ -1044,7 +1052,7 @@ def page_admin():
             + bar("Admin", "Cory &amp; Carissa only")
             + ADMIN_BODY
             + "</main>\n" + ADMIN_JS
-            + '\n<script src="/js/app.js?v=' + CSS_HASH + '"></script>\n</body>\n</html>\n')
+            + '\n<script src="/js/app.js?v=' + ASSET_HASH + '"></script>\n</body>\n</html>\n')
     # Belt and braces: the admin screen must never be indexed, even though the
     # whole site already carries a noindex header.
     return html.replace("<title>Admin</title>",
@@ -1072,8 +1080,8 @@ def main():
     # /admin is deliberately absent: an offline copy of a login screen is
     # useless, and caching it means a signed-out shell can outlive a deploy.
     precache = ["/", "/map", "/stay", "/watch", "/more", "/install",
-                f"/css/app.css?v={CSS_HASH}", f"/js/app.js?v={CSS_HASH}",
-                f"/js/map.js?v={CSS_HASH}", "/manifest.webmanifest"]
+                f"/css/app.css?v={ASSET_HASH}", f"/js/app.js?v={ASSET_HASH}",
+                f"/js/map.js?v={ASSET_HASH}", "/manifest.webmanifest"]
     for pattern in ("data/*.json", "images/*", "icons/*"):
         for f in sorted(ROOT.glob(pattern)):
             url = "/" + f.relative_to(ROOT).as_posix()
@@ -1097,7 +1105,7 @@ def main():
     (ROOT / "js/app.js").write_text(APP_JS)
 
     print(f"  sw.js          version {version}, {len(precache)} precached files")
-    print(f"  css hash       {CSS_HASH}")
+    print(f"  css hash       {ASSET_HASH}")
 
 
 if __name__ == "__main__":
