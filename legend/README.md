@@ -22,12 +22,15 @@ the published list.)
 
 ## Adding places
 
-Press **+ Add a place**. Give it a name, a country (and a state, if it's in
-the US), optionally a date, and coordinates — either type them, press *Use
-country centre* for a rough drop, or press *Pick on map* and click the exact
-spot. Dates matter more than they look: the dashed route line and the mileage
-total are both built from the places that have one, in the order they
-happened.
+Press **+ Add a place**. Start typing a town or city into the Place field and
+it looks itself up (OpenStreetMap's free Nominatim geocoder) — pick a match
+and the country, state and coordinates fill in behind it. If a country can't
+be worked out, it defaults to the US rather than being left blank. All of
+that is a convenience, not a requirement: type any name you like, fill the
+rest in by hand, press *Use country centre* for a rough drop, or press *Pick
+on map* and click the exact spot. Dates matter more than they look: the
+dashed route line and the mileage total are both built from the places that
+have one, in the order they happened.
 
 The fifty-state board has two views, switched with the **Tiles / Map** toggle
 above it. *Tiles* is the square-per-state cartogram: every state has the same
@@ -49,6 +52,11 @@ hundred kilobytes. Signed in on the live site it uploads and is live
 immediately. Without a backend it hands you the resized file and the path to
 drop it at, under `legend/images/trips/`. Several per place is fine, and they
 show in the map popups, the timeline and the photo wall.
+
+A Google Drive share link works too — paste it straight into the Photos box
+instead of (or alongside) an uploaded file. Share the file as "Anyone with
+the link" first; a private Drive link will still be rewritten but won't load
+for anyone without access to the file.
 
 ## Who can change it
 
@@ -177,11 +185,14 @@ committing `data/places.json`.
     tools/build-icons.mjs     regenerates icons/ from the real hero globe
     tools/build-preview.mjs   bundles the site into one shareable .html
 
-The only thing fetched from anyone else at runtime is the map tiles — CARTO
-for the night map, Esri for satellite and terrain. Both are keyless and free
-at this size; past a few thousand views a month, move to a keyed provider.
-Everything else, Leaflet and the state outlines included, is served from this
-folder, so the page still boots with no network at all.
+Two things are fetched from anyone else at runtime: the map tiles — CARTO for
+the night map, Esri for satellite and terrain — and, while the Add-a-place
+form is open and typing, OpenStreetMap's Nominatim geocoder for the place
+lookup. All three are keyless and free at this size; past a few thousand
+views a month, move the tiles to a keyed provider. Everything else, Leaflet
+and the state outlines included, is served from this folder, so the page
+still boots with no network at all — the lookup is a convenience on top of a
+form that works fine without it.
 
 State geometry comes from the US Census Bureau's cartographic boundary files
 (public domain) via `us-atlas` (ISC); the world outlines from Natural Earth

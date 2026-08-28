@@ -136,6 +136,43 @@ persist between sessions. If real regression coverage is worth having,
 that's a candidate for a future session to build properly, in
 `legend/tools/` where it would actually stick around.
 
+## Added after the first "done": place lookup and Drive photos
+
+The owner came back after testing for real and asked for three things on the
+Add-a-place form: typeahead on the Place field, auto-filled country/state/
+coordinates from it, and Google Drive links as a photo source. All three are
+shipped:
+
+- **Typeahead** (`js/app.js`, the "Place lookup" block just before
+  `openForm`) debounces `#f-name` input and queries OpenStreetMap's free,
+  keyless Nominatim geocoder (`nominatim.openstreetmap.org/search`) — no API
+  key, no account, no cost at this scale. Results render into `#f-suggest`;
+  arrow keys and Enter work, a click works, clicking outside or switching to
+  "Beyond Earth" closes it.
+- **Country defaults to US** in two places, deliberately: `pickSuggest()`
+  falls back to `"US"` the moment a geocode result doesn't map to a country
+  in `js/data.js`, and `submitForm()` does the same fallback again as a
+  last resort for anyone who skips the lookup and leaves Country blank by
+  hand. Belt and suspenders — a countryless place on Earth was judged worse
+  than a wrong-but-correctable guess.
+- **`LEGEND.STATE_BY_NAME`** (`js/data.js`) is the reverse of
+  `STATE_BY_CODE` — a geocoder answers with "Utah," not "UT."
+- **Google Drive photo links**: `normalizePhotoURL()` exists twice, once in
+  `js/store.js`'s `clean()` and once (word-for-word logic) in
+  `netlify/functions/places.mjs`'s `clean()`, for the same reason the rest of
+  validation is duplicated there — the browser is not a trustworthy
+  validator. It rewrites `drive.google.com/file/d/ID/view...` and
+  `drive.google.com/open?id=ID` into `drive.google.com/uc?export=view&id=ID`,
+  which is the shape that actually loads in an `<img src>`. A Drive share
+  link only works if the file itself is shared "Anyone with the link" —
+  that's a Drive setting, not something this site can change.
+
+Nominatim is the one addition to the "everything is local" story: the page
+still boots and the form still works with no network, but while someone is
+typing a place name it makes an outbound fetch. It has nothing to do with
+reading or saving the list, so it changes nothing about what mode `js/store.js`
+is in.
+
 ## What's left
 
 - **Point `legenddzbinski.com` at the `legendarytravel` Netlify site** —
