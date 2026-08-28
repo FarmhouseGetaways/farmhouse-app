@@ -162,10 +162,10 @@ committing `data/places.json`.
 
     data/places.json          the published list of places
     data/demo-places.json     invented trips, used only by the --demo preview
-    images/favicon.svg        the mark
+    images/favicon.svg        the browser-tab mark (small, abstract, hand-drawn)
     vendor/leaflet/           Leaflet 1.9.4, vendored (BSD-2)
 
-    icons/                    GENERATED — app icons, from images/favicon.svg
+    icons/                    GENERATED — home-screen icons, a screenshot of the hero globe
     manifest.webmanifest      makes it installable
     sw.js                     offline cache
 
@@ -174,7 +174,7 @@ committing `data/places.json`.
 
     tools/build-usmap.mjs     regenerates js/usmap.js
     tools/build-worldmap.mjs  regenerates js/worldmap.js
-    tools/build-icons.mjs     regenerates icons/ from the favicon
+    tools/build-icons.mjs     regenerates icons/ from the real hero globe
     tools/build-preview.mjs   bundles the site into one shareable .html
 
 The only thing fetched from anyone else at runtime is the map tiles — CARTO
