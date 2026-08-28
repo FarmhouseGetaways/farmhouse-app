@@ -13,7 +13,12 @@
 <meta property="og:url" content="https://legenddzbinski.com/">
 
 <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- iOS caches the home-screen icon by URL, fairly independently of normal
+     HTTP cache headers, and does not reliably refetch it just because the
+     shortcut was removed and re-added. ?v=2 is a real cache bust: bump it
+     any time icons/apple-touch-icon.png changes again, or a phone that
+     already has this site's icon will keep showing the old one. -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
 
 <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
