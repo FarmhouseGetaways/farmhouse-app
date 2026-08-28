@@ -1,10 +1,16 @@
 /* ==========================================================================
    Generates icons/*.png from the actual hero globe — the real continent
-   outlines, the real night-ocean palette, the real rim light. Not a redrawn
-   approximation of it: this loads js/data.js, js/store.js, js/worldmap.js
-   and js/globe.js exactly as index.html does, and screenshots what they
-   draw. If the globe's look ever changes, these icons change with it for
-   free the next time this is run.
+   outlines, the real projection, the real pins. Not a redrawn approximation
+   of it: this loads js/data.js, js/store.js, js/worldmap.js and js/globe.js
+   exactly as index.html does, and screenshots what they draw. If the
+   geography or the pins ever change, these icons change with them for free
+   the next time this is run.
+
+   The one deliberate difference: `{ punchy: true }` below. The hero's subtle
+   night-ocean palette all but disappears at 180px on someone's home screen —
+   "hard to make out what it is" was the actual complaint — so globe.js has a
+   second, bolder palette (brighter land, a thicker glowing rim, a bigger pin)
+   that only icon rendering asks for. The hero on the page is untouched.
 
    A one-off, like the other generators here: the output is committed and the
    site has no build step.
@@ -68,7 +74,7 @@ ${bodyHtml}
 <script>
 window.__renderReady = false;
 function boot(id) {
-  var g = LEGEND.Globe.create(document.getElementById(id), {});
+  var g = LEGEND.Globe.create(document.getElementById(id), { punchy: true });
   g.setPlaces([${JSON.stringify(SEED_PLACE)}]);
   g.lookAt(${LOOK_LAT}, ${LOOK_LNG});
   g.pause(true);
