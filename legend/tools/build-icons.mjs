@@ -104,11 +104,33 @@ function shaded(canvasHtml, size) {
    globe's blues that the rim reads as an edge rather than fading out. */
 const ICON_BG = "#170f2c";
 
+/* The glass-button treatment: the whole icon tile, not just the globe
+   inside it. A bright inset edge along the top, a darker one along the
+   bottom, and a soft sheen fading down from the top — the classic
+   convex-glass look, applied to the tile's own square boundary so it
+   reads before the eye even gets to what's drawn on it. */
+function tile(innerHtml, size) {
+  var top = Math.max(3, Math.round(size * 0.05));
+  var bottom = Math.max(3, Math.round(size * 0.065));
+  var edge = Math.max(1, Math.round(size * 0.006));
+  return `
+  <div id="tile" style="position:relative;width:${size}px;height:${size}px;box-sizing:border-box;
+              background:${ICON_BG};display:flex;align-items:center;justify-content:center;
+              box-shadow: inset 0 ${top}px ${Math.round(top * 1.5)}px rgba(255,255,255,.4),
+                          inset 0 -${bottom}px ${Math.round(bottom * 1.5)}px rgba(0,0,0,.65),
+                          inset 0 ${edge}px 0 0 rgba(255,255,255,.55),
+                          inset 0 0 0 1px rgba(255,255,255,.16)">
+    ${innerHtml}
+    <div style="position:absolute;inset:0;pointer-events:none;
+                background:linear-gradient(180deg, rgba(255,255,255,.42) 0%, rgba(255,255,255,.14) 30%, rgba(255,255,255,0) 58%);
+                mix-blend-mode:screen"></div>
+  </div>`;
+}
+
 function page(bodyHtml) {
   return `<!doctype html><html><head><meta charset="utf-8">
 <style>html,body{margin:0;background:${ICON_BG}}
 canvas{display:block;background:${ICON_BG}}
-.frame{display:flex;align-items:center;justify-content:center;background:${ICON_BG};box-sizing:border-box}
 </style></head><body>
 ${bodyHtml}
 <script src="js/data.js"></script>
@@ -148,30 +170,29 @@ async function render(html, selector, viewport, outFile) {
   await p.close();
 }
 
-/* Full-bleed sizes: the globe itself is the whole icon, using globe.js's
-   own built-in ~7% margin, with the shading wrapper the exact declared
-   size around it. */
+/* Full-bleed sizes: the globe itself is (almost) the whole icon, using
+   globe.js's own built-in ~7% margin, with the shading wrapper and the
+   glass-button tile both sized to the exact declared size around it. */
 for (const { file, size } of [
   { file: "icons/icon-512.png", size: 512 },
   { file: "icons/icon-192.png", size: 192 },
   { file: "icons/apple-touch-icon.png", size: 180 }
 ]) {
   const canvasHtml = `<canvas id="g" data-globe width="${size}" height="${size}" style="width:${size}px;height:${size}px"></canvas>`;
-  const html = page(`<div id="shaded">${shaded(canvasHtml, size)}</div>`);
-  await render(html, "#shaded", { width: size + 40, height: size + 40 }, file);
+  const html = page(tile(shaded(canvasHtml, size), size));
+  await render(html, "#tile", { width: size + 40, height: size + 40 }, file);
   console.log(`${file}: ${size}×${size}`);
 }
 
-/* Maskable: a 512 frame holding a 380 globe, centred — roughly a 74%
+/* Maskable: a 512 tile holding a 380 globe, centred — roughly a 74%
    content diameter, safely inside the ~66-80% every launcher mask leaves
-   uncropped. Shading wraps the inner globe, not the outer frame — a
-   maskable icon's frame is invisible letterboxing, not part of the art. */
+   uncropped. The glass-button bevel goes on the outer 512 tile, same as
+   the others; shading wraps just the inner globe. */
 {
   const OUTER = 512, INNER = 380;
   const canvasHtml = `<canvas id="g" data-globe width="${INNER}" height="${INNER}" style="width:${INNER}px;height:${INNER}px"></canvas>`;
-  const html = page(
-    `<div class="frame" style="width:${OUTER}px;height:${OUTER}px">${shaded(canvasHtml, INNER)}</div>`);
-  await render(html, ".frame", { width: OUTER + 40, height: OUTER + 40 }, "icons/maskable-512.png");
+  const html = page(tile(shaded(canvasHtml, INNER), OUTER));
+  await render(html, "#tile", { width: OUTER + 40, height: OUTER + 40 }, "icons/maskable-512.png");
   console.log(`icons/maskable-512.png: ${OUTER}×${OUTER}, globe at ${Math.round(INNER / OUTER * 100)}%`);
 }
 

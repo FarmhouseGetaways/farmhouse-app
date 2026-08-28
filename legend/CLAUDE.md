@@ -202,7 +202,7 @@ is in.
 
 ## The home-screen icon's long history — it's the globe again
 
-Seven rounds so far, and worth reading in full before touching
+Eight rounds so far, and worth reading in full before touching
 `icons/*.png` or `tools/build-icons.mjs` again, because the obvious-looking
 fixes at several points here were tried already and didn't work.
 
@@ -249,6 +249,16 @@ fixes at several points here were tried already and didn't work.
    well any given background happens to contrast. Belt and suspenders: the
    colour change does most of the work, the ring means it doesn't have to
    do all of it.
+8. Reaction to round 7: "better but I want the edges of the tile
+   highlighted. Maybe like a glass button." — a request about the *tile*,
+   not the globe: the whole icon square, not just the sphere inside it.
+   `tools/build-icons.mjs` grew a `tile()` wrapper — a convex-glass bevel
+   on the icon's own outer edge (a bright inset top, a darker inset bottom,
+   a thin bright top edge, a soft sheen fading down from the top) — used
+   by all four renders, including maskable's outer 512 frame, not just the
+   380 globe inside it. This is a second, independent bevel from round 7's
+   rim ring: that one is on the globe's own circular clip; this one is on
+   the tile's square boundary around it.
 
 If a future session finds `punchy` back in `js/globe.js` after reading that
 it was once removed (an earlier version of this file said so, from round
@@ -262,7 +272,7 @@ alone.
 
 Every icon-only round bumped the cache-busting `?v=N` on the icon URLs (in
 `index.html`, `manifest.webmanifest`, `sw.js`'s precache list) and `sw.js`'s
-`VERSION`, currently at `?v=8` / `legend-v9` — see "Mistakes already made"
+`VERSION`, currently at `?v=9` / `legend-v10` — see "Mistakes already made"
 below on why both matter, not just one. If the owner asks for another icon
 change, expect to bump both again.
 
