@@ -8,35 +8,38 @@
  * for. Five lines, rotated, stay legible for months.
  *
  * WHAT THEY ARE ALLOWED TO CLAIM
- * Not every story is a restock. Some are a sunset over the pasture. So none of
- * these promise bread — they promise that Carissa posted and that the shelf
- * may have changed, which is true every time. A notification that says "fresh
- * sourdough" on a day there is no sourdough costs more trust than a dull one
- * ever costs attention.
+ * Not every story is a restock. Some are a sunset over the pasture, or — as
+ * happened on 28 Aug 2026 — a video that reads as unrelated news at a glance
+ * even though the post itself was genuinely about the shelf. The earlier
+ * wording ("The stand just changed... here is what is in there right now")
+ * stated that as fact, which is a claim the app cannot actually verify. This
+ * version only ever claims that Carissa posted, which is true every time,
+ * and lets the tap reveal what it was about.
  *
- * No emoji, no exclamation marks. That is the house voice everywhere else and
- * a lock screen is not the place to break it.
+ * The title is fixed at the owner's request on 28 Aug 2026 — every line reads
+ * "Mini Barn Market Update!" — with the rotation carried entirely by the
+ * body, so the notification still doesn't go stale after a week.
  */
 export const LINES = [
   {
-    title: "Something just landed",
-    body: "Carissa posted from the barn — tap to see what is on the shelf.",
+    title: "Mini Barn Market Update!",
+    body: "Carissa just posted — tap to see what's on the shelf.",
   },
   {
-    title: "Fresh on the shelf",
-    body: "Carissa's latest update. Worth a look before it is gone.",
+    title: "Mini Barn Market Update!",
+    body: "Carissa just posted a look at the stand right now.",
   },
   {
-    title: "The stand just changed",
-    body: "Carissa posted. Here is what is in there right now.",
+    title: "Mini Barn Market Update!",
+    body: "Carissa just posted. Take a look before it's gone.",
   },
   {
-    title: "New at Mini Barn Market",
-    body: "Straight from Carissa — today's update is up.",
+    title: "Mini Barn Market Update!",
+    body: "Carissa just posted from the barn — tap to see.",
   },
   {
-    title: "Carissa posted",
-    body: "What went on the shelf today. Tap to see it.",
+    title: "Mini Barn Market Update!",
+    body: "Carissa just posted. Here's what's new today.",
   },
 ];
 
