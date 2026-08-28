@@ -22,6 +22,13 @@ All on one Netlify team and one GitHub account. All deploy `main` on push with
 brand voice, audience, history, every decision and why. Read it before writing
 any copy for any of these brands.
 
+**A fifth, unrelated project lives in this same repo:** `legend/` is Legend
+Dzbinski's travel tracker, its own static site plus three Netlify Functions,
+deployed as its own separate Netlify site (base directory `legend`) — not one
+of the four properties above, and not on `legenddzbinski.com` yet. **Read
+`legend/CLAUDE.md` before touching anything in that folder** — it has its own
+history, its own deploy, its own gotchas already hit once.
+
 **Never drag a folder onto Netlify.** A dragged deploy bypasses the repo, the
 live site and `main` drift apart, and the next push silently reverts it. All
 three websites were originally published that way, which is why their repos had
