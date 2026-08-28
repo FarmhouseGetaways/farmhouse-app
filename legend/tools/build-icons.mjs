@@ -1,43 +1,27 @@
 /* ==========================================================================
-   Generates icons/*.png from the actual hero globe — the real continent
-   outlines, the real projection, the real pins. Not a redrawn approximation
-   of it: this loads js/data.js, js/store.js, js/worldmap.js and js/globe.js
-   exactly as index.html does, and screenshots what they draw. If the
-   geography or the pins ever change, these icons change with them for free
-   the next time this is run.
+   Generates icons/*.png — a mountain, a trail and a pin.
 
-   The one deliberate difference: `{ punchy: true }` below. The hero's subtle
-   night-ocean palette all but disappears at 180px on someone's home screen —
-   "hard to make out what it is" was the actual complaint — so globe.js has a
-   second, bolder palette (brighter land, a bigger pin) that only icon
-   rendering asks for. The hero on the page is untouched.
+   This used to be a screenshot of the actual hero globe, kept in lockstep
+   with it on purpose. Two rounds of trying to make that read clearly at
+   180px on a home screen (a bolder palette, then a border) still weren't
+   enough — the owner's call in the end was that a globe just doesn't read
+   as a shape at that size, and asked for a trail/mountain icon instead,
+   which is a different picture, not a smaller globe. So this is now a
+   hand-drawn SVG illustration, unrelated to js/globe.js.
 
-   Icon renders also skip the hero's glowing rim (globe.js's `punchy` branch
-   again) in favour of a border around the icon frame itself, drawn here as
-   a CSS border rather than in globe.js — it frames the icon, not the globe,
-   and `box-sizing: border-box` on the screenshotted element keeps the
-   exported PNG at exactly the declared size with the border inset, not
-   added on top of it.
+   Being vector, it needs no per-size scaling math the way the globe render
+   did — the same markup is rendered at each output's native size and stays
+   crisp. Only the maskable icon is different in kind: it draws the same
+   artwork smaller, centred in a bigger frame that repeats the sky colour
+   to the edges, so cropping to a launcher's mask shape can't eat the
+   mountain or the pin.
 
-   A one-off, like the other generators here: the output is committed and the
-   site has no build step.
+   A one-off, like the other generators here: the output is committed and
+   the site has no build step.
 
        npm install playwright
        node tools/build-icons.mjs
        rm -rf node_modules package-lock.json
-
-   Four renders, each at its native output size rather than one master
-   scaled down — globe.js's own margin math is proportional to whatever
-   canvas size it's given, so a 180px render is exactly as crisp as a 512px
-   one, not a downsampled copy of it.
-
-   The fourth is the one people forget: a maskable icon is cropped to
-   whatever shape the phone likes (circle, squircle, rounded square), so its
-   artwork has to sit inside a safe zone well short of the full square or the
-   corners get eaten. That one renders the globe into a smaller canvas
-   centred in the full-size frame, rather than shrinking the globe itself —
-   globe.js has no size-independent "margin" knob, so the frame is where the
-   margin comes from.
    ========================================================================== */
 
 import { writeFileSync, mkdirSync, rmSync } from "node:fs";
@@ -48,61 +32,54 @@ import { dirname, resolve } from "node:path";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 mkdirSync("icons", { recursive: true });
 
-/* Chromium refuses file:// script loads from a page with no origin of its
-   own (page.setContent lands on about:blank), so the render page has to be
-   an actual file next to the ones it loads — not content handed to the
-   browser in memory. Written once, overwritten per render, deleted after. */
 const TMP = resolve(ROOT, ".icon-render.tmp.html");
 
-/* The one place that has ever been on the map by default. A single glowing
-   home pin is what the hero itself shows on a fresh install, so the icon
-   matches rather than showing an empty ocean. */
-const SEED_PLACE = {
-  id: "p_home", name: "Ramona, California", kind: "home",
-  country: "US", state: "CA", lat: 33.03, lng: -116.87,
-  date: "", notes: "", photos: [], fav: true
-};
+const SKY_TOP = "#8fd1f0", SKY_BOTTOM = "#dff3fb";
 
-/* Centred on the Americas — the most recognisable silhouette at icon sizes,
-   and where the seed pin actually sits. */
-const LOOK_LAT = 12, LOOK_LNG = -85;
+/* One 100×100 illustration, reused at every output size. Colours:
+   the pin is the exact amber the app already uses for a "home" place
+   (js/globe.js's C.home) — the one deliberate link back to the site's own
+   palette in an otherwise unrelated picture. */
+function artwork() {
+  return `
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${SKY_TOP}"/>
+      <stop offset="1" stop-color="${SKY_BOTTOM}"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="100" height="100" fill="url(#sky)"/>
 
-/* Proportional rather than fixed, so the border carries the same visual
-   weight from the 180px icon up to the 512px one instead of looking thin
-   on the big renders or heavy on the small one. */
-const BORDER_COLOR = "rgba(255,255,255,0.4)";
-function borderWidth(size) { return Math.max(3, Math.round(size * 0.035)); }
+  <!-- sun, tucked behind the back peak for a little depth -->
+  <circle cx="83" cy="19" r="9" fill="#ffd158" stroke="#1b2b3a" stroke-width="3"/>
+
+  <!-- back mountain -->
+  <path d="M40,74 L74,18 L100,74 Z"
+        fill="#93a9c9" stroke="#1b2b3a" stroke-width="3.2" stroke-linejoin="round"/>
+
+  <!-- front mountain, with a darker facet for shape -->
+  <path d="M0,84 L34,24 L66,84 Z"
+        fill="#4f9a5c" stroke="#1b2b3a" stroke-width="3.2" stroke-linejoin="round"/>
+  <path d="M34,24 L48,50 L34,58 L22,50 Z" fill="#3c7c48"/>
+
+  <!-- the trail, drawn over both slopes so it reads as a path rather than
+       hiding behind the terrain -->
+  <path d="M50,101 C39,89 60,80 41,67 C29,59 45,49 34,38 C28,32 34,28 34,24"
+        fill="none" stroke="#1b2b3a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M50,101 C39,89 60,80 41,67 C29,59 45,49 34,38 C28,32 34,28 34,24"
+        fill="none" stroke="#d9a45e" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- the pin, planted on the summit where the trail ends -->
+  <g transform="translate(34,20)">
+    <path d="M0,-10 C5.5,-10 9,-6.2 9,-1.6 C9,4 0,12 0,12 C0,12 -9,4 -9,-1.6 C-9,-6.2 -5.5,-10 0,-10 Z"
+          fill="#fbbf24" stroke="#1b2b3a" stroke-width="3"/>
+    <circle cx="0" cy="-1.6" r="3.1" fill="#1b2b3a"/>
+  </g>`;
+}
 
 function page(bodyHtml) {
   return `<!doctype html><html><head><meta charset="utf-8">
-<style>html,body{margin:0;background:#05070f}
-canvas{display:block;background:#05070f}
-.frame{display:flex;align-items:center;justify-content:center;background:#05070f;box-sizing:border-box}
-.iconframe{display:flex;align-items:center;justify-content:center;background:#05070f;box-sizing:border-box}
-</style></head><body>
-${bodyHtml}
-<script src="js/data.js"></script>
-<script src="js/store.js"></script>
-<script src="js/worldmap.js"></script>
-<script src="js/globe.js"></script>
-<script>
-window.__renderReady = false;
-function boot(id) {
-  var g = LEGEND.Globe.create(document.getElementById(id), { punchy: true });
-  g.setPlaces([${JSON.stringify(SEED_PLACE)}]);
-  g.lookAt(${LOOK_LAT}, ${LOOK_LNG});
-  g.pause(true);
-}
-document.querySelectorAll("canvas[data-globe]").forEach(function (c) { boot(c.id); });
-/* Two frames: the first draw happens on the rAF the constructor already
-   scheduled: give it one more tick so that has definitely landed before the
-   screenshot, since pause() only stops the *next* frame's rotation, not the
-   one already queued. */
-requestAnimationFrame(function () {
-  requestAnimationFrame(function () { window.__renderReady = true; });
-});
-</script>
-</body></html>`;
+<style>html,body{margin:0}</style></head><body>${bodyHtml}</body></html>`;
 }
 
 const browser = await chromium.launch(
@@ -112,44 +89,37 @@ async function render(html, selector, viewport, outFile) {
   writeFileSync(TMP, html);
   const p = await browser.newPage({ viewport, deviceScaleFactor: 1 });
   await p.goto("file://" + TMP);
-  await p.waitForFunction(() => window.__renderReady, { timeout: 5000 });
   const buf = await p.locator(selector).screenshot();
   writeFileSync(outFile, buf);
   await p.close();
 }
 
-/* Full-bleed sizes: the globe itself is the whole icon, using globe.js's
-   own built-in ~7% margin, with a bordered frame the exact declared size
-   wrapped around it — the canvas is untouched, the border sits on top. */
+/* Full-bleed sizes: the artwork's own 100×100 viewBox fills the icon
+   completely, scaled by the SVG's width/height rather than redrawn. */
 for (const { file, size } of [
   { file: "icons/icon-512.png", size: 512 },
   { file: "icons/icon-192.png", size: 192 },
   { file: "icons/apple-touch-icon.png", size: 180 }
 ]) {
-  const bw = borderWidth(size);
   const html = page(
-    `<div class="iconframe" style="width:${size}px;height:${size}px;border:${bw}px solid ${BORDER_COLOR}">
-       <canvas id="g" data-globe width="${size - bw * 2}" height="${size - bw * 2}"
-               style="width:${size - bw * 2}px;height:${size - bw * 2}px"></canvas>
-     </div>`);
-  await render(html, ".iconframe", { width: size + 20, height: size + 20 }, file);
+    `<svg id="v" width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${artwork()}</svg>`);
+  await render(html, "#v", { width: size + 20, height: size + 20 }, file);
   console.log(`${file}: ${size}×${size}`);
 }
 
-/* Maskable: a 512 frame holding a 380 globe, centred — roughly a 74%
-   content diameter, safely inside the ~66-80% every launcher mask leaves
-   uncropped. The border sits on the 512 frame, same as the others; an
-   aggressive circular mask can crop more of it than on the other icons,
-   but this is also the icon least often actually seen unmasked. */
+/* Maskable: the same artwork at 74% scale, centred in a 512 frame whose
+   background repeats the sky gradient to the edges — a launcher's mask can
+   crop the frame down to whatever shape it likes without ever touching the
+   mountain or the pin. */
 {
   const OUTER = 512, INNER = 380;
-  const bw = borderWidth(OUTER);
   const html = page(
-    `<div class="frame" style="width:${OUTER}px;height:${OUTER}px;border:${bw}px solid ${BORDER_COLOR}">
-       <canvas id="g" data-globe width="${INNER}" height="${INNER}" style="width:${INNER}px;height:${INNER}px"></canvas>
+    `<div style="width:${OUTER}px;height:${OUTER}px;display:flex;align-items:center;justify-content:center;
+                 background:linear-gradient(${SKY_TOP},${SKY_BOTTOM})">
+       <svg id="v" width="${INNER}" height="${INNER}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${artwork()}</svg>
      </div>`);
-  await render(html, ".frame", { width: OUTER + 20, height: OUTER + 20 }, "icons/maskable-512.png");
-  console.log(`icons/maskable-512.png: ${OUTER}×${OUTER}, globe at ${Math.round(INNER / OUTER * 100)}%`);
+  await render(html, "div", { width: OUTER + 20, height: OUTER + 20 }, "icons/maskable-512.png");
+  console.log(`icons/maskable-512.png: ${OUTER}×${OUTER}, artwork at ${Math.round(INNER / OUTER * 100)}%`);
 }
 
 await browser.close();

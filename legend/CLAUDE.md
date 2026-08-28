@@ -114,6 +114,17 @@ time twice.
 5. **`LEGEND_PASSWORD` has to be set *and the site redeployed*** — environment
    variables are read when the Functions build, so setting the variable alone
    doesn't take effect until the next deploy.
+6. **Changing `icons/*.png` and deploying is not enough to change what a
+   phone shows.** Two independent client-side caches sit in front of it: the
+   service worker precaches the icon files under a `VERSION` that has to be
+   bumped or an already-installed copy never notices anything changed, and
+   iOS caches the home-screen icon by its exact URL, fairly independently of
+   HTTP cache headers, and won't reliably refetch it just because the
+   shortcut was removed and re-added. Both have to move together — bump
+   `sw.js`'s `VERSION` *and* the `?v=N` on every icon reference (in
+   `index.html`, `manifest.webmanifest`, and `sw.js`'s own precache list) —
+   any time the icon files change, or the fix silently doesn't reach anyone
+   who already has the site installed.
 
 ## Verifying it's actually working (not just deployed)
 
@@ -172,6 +183,31 @@ still boots and the form still works with no network, but while someone is
 typing a place name it makes an outbound fetch. It has nothing to do with
 reading or saving the list, so it changes nothing about what mode `js/store.js`
 is in.
+
+## The home-screen icon stopped being the globe
+
+It went through three rounds. First it was a literal screenshot of the hero
+globe (`tools/build-icons.mjs` loading `js/globe.js` and the real geography
+in headless Chromium) — better than the original abstract mark, but still
+too subtle to read at 180px on a phone. Second, `js/globe.js` grew an
+`opts.punchy` flag with a bolder icon-only palette and a glowing rim, used
+only by the icon build. Third, the owner didn't want the globe there at all
+— asked for a trail icon instead, mountains and a path, closer to how a
+hiking app would badge itself.
+
+So `tools/build-icons.mjs` no longer touches `js/globe.js` in any way: it's
+a self-contained hand-drawn SVG (two mountains, a winding trail, a pin on
+the summit) rendered at each icon size, and the `punchy` flag in
+`js/globe.js` was reverted out since nothing calls it anymore. If a future
+session finds no trace of "punchy" in globe.js, that's not a regression —
+it was deliberately removed once the icon stopped being a globe at all. The
+one link back to the site's own palette: the pin is drawn in the exact
+amber `js/globe.js` uses for a "home" place.
+
+Every icon-only round bumped the cache-busting `?v=N` on the icon URLs (in
+`index.html`, `manifest.webmanifest`, `sw.js`'s precache list) and `sw.js`'s
+`VERSION`, currently at v6/legend-v6 — see "Mistakes already made" below on
+why both matter, not just one.
 
 ## What's left
 

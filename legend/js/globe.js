@@ -44,19 +44,6 @@ window.LEGEND = window.LEGEND || {};
     planned: "#7c8aa5"
   };
 
-  /* A bolder palette for icon rendering only (opts.punchy) — the hero globe
-     on the page is meant to be subtle at a size where you can look at it for
-     a second; a home-screen icon is seen for a fraction of that, at a
-     fraction of the size, so it needs far more contrast between land and
-     ocean to read as a globe at all rather than a dark smudge. The hero's
-     own colours are untouched. */
-  var PUNCHY = {
-    ocean0: "#1c4c8c",
-    ocean1: "#010308",
-    land:   "#5f96e6",
-    coast:  "#dcebff"
-  };
-
   function pinColour(p) {
     if (p.kind === "planned") return C.planned;
     if (p.kind === "home") return C.home;
@@ -68,8 +55,6 @@ window.LEGEND = window.LEGEND || {};
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.opts = opts || {};
-    this.punchy = !!this.opts.punchy;
-    this.C = this.punchy ? PUNCHY : C;
     this.places = [];
     this.lambda = 100;          // degrees of rotation, west-positive
     this.phi = 16;              // tilt toward the viewer
@@ -98,9 +83,7 @@ window.LEGEND = window.LEGEND || {};
     this.size = size;
     this.cx = size / 2;
     this.cy = size / 2;
-    /* An icon has no hint text or padding around it to spare — the globe
-       should fill almost the whole frame. */
-    this.r = size / 2 - Math.max(this.punchy ? 3 : 6, size * (this.punchy ? 0.015 : 0.035));
+    this.r = size / 2 - Math.max(6, size * 0.035);
   };
 
   Globe.prototype.bind = function () {
@@ -263,12 +246,10 @@ window.LEGEND = window.LEGEND || {};
         if (open) ctx.closePath();
       }
     }
-    ctx.fillStyle = this.C.land;
+    ctx.fillStyle = C.land;
     ctx.fill("evenodd");
-    ctx.strokeStyle = this.C.coast;
-    /* At icon sizes the hero's hairline coast (0.6px) all but disappears —
-       land has to read as a shape at a glance, not on close inspection. */
-    ctx.lineWidth = this.punchy ? Math.max(2, this.size * 0.012) : 0.6;
+    ctx.strokeStyle = C.coast;
+    ctx.lineWidth = 0.6;
     ctx.stroke();
   };
 
@@ -350,11 +331,6 @@ window.LEGEND = window.LEGEND || {};
   Globe.prototype.drawPins = function () {
     var ctx = this.ctx;
     this.hit = [];
-    /* Fixed pixel radii suit the hero, which only ever varies within a
-       narrow size range; an icon spans 180–512px, so its pin has to scale
-       with the canvas or it reads as a speck at the big sizes. */
-    var outerR = this.punchy ? this.size * 0.05 : 5.5;
-    var innerR = this.punchy ? this.size * 0.026 : 2.6;
     for (var i = 0; i < this.places.length; i++) {
       var p = this.places[i];
       var s = this.project(p.lng, p.lat);
@@ -362,13 +338,13 @@ window.LEGEND = window.LEGEND || {};
       var col = pinColour(p);
 
       ctx.beginPath();
-      ctx.arc(s.x, s.y, outerR, 0, Math.PI * 2);
+      ctx.arc(s.x, s.y, 5.5, 0, Math.PI * 2);
       ctx.fillStyle = col;
-      ctx.globalAlpha = this.punchy ? 0.35 : 0.22;
+      ctx.globalAlpha = 0.22;
       ctx.fill();
 
       ctx.beginPath();
-      ctx.arc(s.x, s.y, innerR, 0, Math.PI * 2);
+      ctx.arc(s.x, s.y, 2.6, 0, Math.PI * 2);
       ctx.globalAlpha = 1;
       if (p.kind === "planned") {
         ctx.strokeStyle = col;
@@ -390,8 +366,8 @@ window.LEGEND = window.LEGEND || {};
     var g = ctx.createRadialGradient(
       this.cx - this.r * 0.35, this.cy - this.r * 0.4, this.r * 0.1,
       this.cx, this.cy, this.r);
-    g.addColorStop(0, this.C.ocean0);
-    g.addColorStop(1, this.C.ocean1);
+    g.addColorStop(0, C.ocean0);
+    g.addColorStop(1, C.ocean1);
 
     ctx.save();
     ctx.beginPath();
@@ -400,25 +376,18 @@ window.LEGEND = window.LEGEND || {};
     ctx.fill();
     ctx.clip();                       // everything else stays on the disc
 
-    /* The graticule is a hairline at hero size and pure noise at icon size —
-       it costs nothing to draw and nothing to skip, so skip it. */
-    if (!this.punchy) this.drawGraticule();
+    this.drawGraticule();
     this.drawLand();
     this.drawRoutes();
     this.drawPins();
     ctx.restore();
 
-    /* A rim light, so the sphere reads as lit rather than as a flat circle.
-       Icon rendering skips it — the icon frame itself gets a border instead
-       (see build-icons.mjs), and a glowing ring around the globe on top of
-       that read as two competing outlines. */
-    if (!this.punchy) {
-      ctx.beginPath();
-      ctx.arc(this.cx, this.cy, this.r, 0, Math.PI * 2);
-      ctx.strokeStyle = this.C.rim;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
+    /* A rim light, so the sphere reads as lit rather than as a flat circle. */
+    ctx.beginPath();
+    ctx.arc(this.cx, this.cy, this.r, 0, Math.PI * 2);
+    ctx.strokeStyle = C.rim;
+    ctx.lineWidth = 1;
+    ctx.stroke();
   };
 
   Globe.prototype.frame = function (ts) {
