@@ -185,11 +185,11 @@ committing `data/places.json`.
     tools/build-icons.mjs     regenerates icons/ from a hand-drawn SVG
     tools/build-preview.mjs   bundles the site into one shareable .html
 
-Two things are fetched from anyone else at runtime: the map tiles — CARTO for
-the night map, Esri for satellite and terrain — and, while the Add-a-place
-form is open and typing, OpenStreetMap's Nominatim geocoder for the place
-lookup. All three are keyless and free at this size; past a few thousand
-views a month, move the tiles to a keyed provider. Everything else, Leaflet
+Two things are fetched from anyone else at runtime: the map tiles — Esri's
+ArcGIS Online basemaps for all three styles (Night, Satellite, Terrain) — and,
+while the Add-a-place form is open and typing, OpenStreetMap's Nominatim
+geocoder for the place lookup. All are keyless and free at this size; past a
+few thousand views a month, move the tiles to a keyed provider. Everything else, Leaflet
 and the state outlines included, is served from this folder, so the page
 still boots with no network at all — the lookup is a convenience on top of a
 form that works fine without it.

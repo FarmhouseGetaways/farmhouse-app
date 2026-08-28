@@ -21,11 +21,22 @@ window.LEGEND = window.LEGEND || {};
   var OSM = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
   var STYLES = {
+    /* Was CARTO's dark_all — genuinely keyless, but its free anonymous tier
+       is a shared, best-effort quota, not a guaranteed one, and it started
+       serving an "API key required" watermark instead of tiles once that
+       quota was hit. Esri's Dark Gray Canvas is the same kind of always-free
+       ArcGIS Online service already relied on for Satellite and Terrain
+       below, just two layers (a base and a label overlay) instead of one.
+       It's a lighter grey than CARTO's near-black by default, so the base
+       layer alone gets a CSS filter (see .map-night-base in legend.css)
+       pushing it toward the app's own dark navy; the label layer is left
+       alone so place names stay crisp. */
     night: {
       label: "Night",
-      url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-      attrib: OSM + ' &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      sub: "abcd", max: 20
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      refUrl: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+      attrib: "Tiles &copy; Esri — HERE, Garmin, OpenStreetMap contributors",
+      max: 16
     },
     satellite: {
       label: "Satellite",
@@ -41,6 +52,7 @@ window.LEGEND = window.LEGEND || {};
 
   var map = null;
   var tiles = null;
+  var refTiles = null;           // night style's label overlay, if any
   var pinLayer = null;
   var pathLayer = null;
   var markers = {};              // place id -> marker
@@ -60,6 +72,7 @@ window.LEGEND = window.LEGEND || {};
     var s = STYLES[name] || STYLES.night;
     currentStyle = STYLES[name] ? name : "night";
     if (tiles) map.removeLayer(tiles);
+    if (refTiles) { map.removeLayer(refTiles); refTiles = null; }
     tiles = window.L.tileLayer(s.url, {
       attribution: s.attrib,
       maxZoom: s.max,
@@ -67,6 +80,18 @@ window.LEGEND = window.LEGEND || {};
       noWrap: false
     }).addTo(map);
     tiles.getContainer().classList.toggle("is-photo", currentStyle !== "night");
+    tiles.getContainer().classList.toggle("map-night-base", currentStyle === "night");
+
+    /* The night style's place-name overlay — a second, unfiltered layer on
+       top of the tinted base so labels stay crisp rather than tinted navy
+       along with everything else. */
+    if (s.refUrl) {
+      refTiles = window.L.tileLayer(s.refUrl, {
+        maxZoom: s.max,
+        subdomains: s.sub || "abc",
+        noWrap: false
+      }).addTo(map);
+    }
 
     /* If the tiles can't be fetched — offline, a blocked network, a preview
        frame that allows no third-party requests — the vector world underneath

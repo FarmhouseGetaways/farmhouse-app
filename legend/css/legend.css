@@ -228,6 +228,14 @@ select.ctl option { background: var(--ink-2); }
 #map { height: min(66vh, 620px); min-height: 380px; background: #0a0f1c; }
 #map.is-picking { cursor: crosshair; }
 
+/* Esri's Dark Gray Canvas base is a neutral mid-grey, not the near-black
+   the "Night" style is named for. sepia+hue-rotate is the standard trick
+   for tinting a greyscale image, since a true grey has no hue for
+   hue-rotate alone to shift. Only the base tiles get this — the label
+   overlay is added as its own layer precisely so place names stay crisp
+   instead of tinted along with the ground underneath them. */
+.map-night-base { filter: brightness(.5) sepia(.35) hue-rotate(180deg) saturate(2.2) contrast(1.08); }
+
 .maplegend {
   position: absolute; left: 12px; bottom: 12px; z-index: 500;
   display: flex; flex-wrap: wrap; gap: 12px;

@@ -125,6 +125,22 @@ time twice.
    `index.html`, `manifest.webmanifest`, and `sw.js`'s own precache list) —
    any time the icon files change, or the fix silently doesn't reach anyone
    who already has the site installed.
+7. **CARTO's keyless basemap tiles are not reliably always-free** — the
+   "Night" map style used `basemaps.cartocdn.com` with no API key for a
+   while, and it worked fine in testing, then started serving an "API key
+   required" watermark image *instead of* map tiles in production (a 200
+   response, not an error — Leaflet's `tileerror` never fires, so nothing in
+   the app notices). That's the free anonymous tier's real behaviour: a
+   shared, best-effort quota, not a guarantee. Replaced with Esri's Dark Gray
+   Canvas (`js/map.js`'s `STYLES.night`), the same always-free ArcGIS Online
+   service already used for Satellite and Terrain — proven reliable in this
+   app already, at the cost of two tile layers (base + label overlay)
+   instead of one, and a CSS filter (`.map-night-base` in `legend.css`) to
+   push its lighter grey toward the app's own near-black. If "the map looks
+   plain gray" or "it says API key required" comes up again on *any* tile
+   layer, check whether that provider's free tier actually promises no rate
+   limit — CARTO's doesn't, Esri's ArcGIS Online basemaps do (at reasonable
+   volume; see their ToS if this ever gets a lot of traffic).
 
 ## Verifying it's actually working (not just deployed)
 
