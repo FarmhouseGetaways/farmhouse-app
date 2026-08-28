@@ -13,10 +13,15 @@
 <meta property="og:url" content="https://legenddzbinski.com/">
 
 <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- iOS caches the home-screen icon by URL, fairly independently of normal
+     HTTP cache headers, and does not reliably refetch it just because the
+     shortcut was removed and re-added. ?v=9 is a real cache bust: bump it
+     any time icons/apple-touch-icon.png changes again, or a phone that
+     already has this site's icon will keep showing the old one. -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=9">
 <link rel="manifest" href="manifest.webmanifest">
 
-<link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
+<link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
 <!-- Leaflet is vendored in vendor/leaflet rather than pulled from a CDN: one
      less service that can be down, blocked or slow, and the page still boots
      with no network at all. -->
@@ -258,7 +263,7 @@
 
 <footer class="foot">
   <p>legenddzbinski.com — a map that grows.</p>
-  <p class="foot__small">Map data © OpenStreetMap contributors, CARTO, Esri.</p>
+  <p class="foot__small">Map data © OpenStreetMap contributors, Esri, HERE, Garmin.</p>
   <p class="foot__small"><button type="button" id="signin" class="linkish" hidden>Sign in to edit</button></p>
 </footer>
 
@@ -292,10 +297,13 @@
     </div>
 
     <form id="place-form" class="form">
-      <label class="field">
-        <span class="field__label">Place</span>
-        <input type="text" id="f-name" name="name" required placeholder="Kyoto, Japan" autocomplete="off">
-      </label>
+      <div class="field field--combo">
+        <label for="f-name"><span class="field__label">Place</span></label>
+        <input type="text" id="f-name" name="name" required placeholder="Start typing a town or city…"
+               autocomplete="off" role="combobox" aria-expanded="false" aria-controls="f-suggest" aria-autocomplete="list">
+        <ul id="f-suggest" class="suggest" hidden role="listbox"></ul>
+        <p class="field__note" id="f-suggest-note" hidden></p>
+      </div>
 
       <fieldset class="seg">
         <legend class="field__label">Kind</legend>
@@ -351,7 +359,7 @@
         <textarea id="f-photos" rows="2" placeholder="images/trips/kyoto-1.jpg&#10;one per line"></textarea>
         <div class="coords__acts">
           <label class="mini mini--file">Add a photo…<input type="file" id="f-photofile" accept="image/*" multiple hidden></label>
-          <span class="field__note" id="f-photonote">Resized in your browser, then saved for you to drop in <code>images/trips/</code>.</span>
+          <span class="field__note" id="f-photonote">Resized in your browser, then saved for you to drop in <code>images/trips/</code>. A Google Drive share link works too — paste it straight into the box above (make sure the file is shared as "Anyone with the link").</span>
         </div>
       </div>
 

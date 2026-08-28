@@ -69,6 +69,16 @@ window.LEGEND = window.LEGEND || {};
     return "p_" + Math.random().toString(36).slice(2, 9);
   }
 
+  /* A Drive "share" link is a viewer page, not an image — it won't load in
+     an <img src>. This rewrites the common share-link shapes into Drive's
+     direct-content URL so pasting the link Drive gives you just works. */
+  function normalizePhotoURL(u) {
+    u = String(u || "").trim();
+    var m = u.match(/^https?:\/\/(?:www\.)?drive\.google\.com\/file\/d\/([^/]+)/) ||
+      u.match(/^https?:\/\/(?:www\.)?drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([^&#]+)/);
+    return m ? "https://drive.google.com/uc?export=view&id=" + m[1] : u;
+  }
+
   /* Fill in what the form left out and drop anything malformed, so a
      hand-edited places.json can't take the page down. */
   function clean(p) {
@@ -81,7 +91,7 @@ window.LEGEND = window.LEGEND || {};
        changed still loads, and is written back out as a list of one. */
     var photos = Array.isArray(p.photos) ? p.photos : [];
     if (!photos.length && p.photo) photos = [p.photo];
-    photos = photos.map(function (u) { return String(u || "").trim(); })
+    photos = photos.map(function (u) { return normalizePhotoURL(u); })
                    .filter(Boolean);
     return {
       id: p.id || uid(),
