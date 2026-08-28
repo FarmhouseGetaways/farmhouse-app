@@ -292,10 +292,13 @@
     </div>
 
     <form id="place-form" class="form">
-      <label class="field">
-        <span class="field__label">Place</span>
-        <input type="text" id="f-name" name="name" required placeholder="Kyoto, Japan" autocomplete="off">
-      </label>
+      <div class="field field--combo">
+        <label for="f-name"><span class="field__label">Place</span></label>
+        <input type="text" id="f-name" name="name" required placeholder="Start typing a town or city…"
+               autocomplete="off" role="combobox" aria-expanded="false" aria-controls="f-suggest" aria-autocomplete="list">
+        <ul id="f-suggest" class="suggest" hidden role="listbox"></ul>
+        <p class="field__note" id="f-suggest-note" hidden></p>
+      </div>
 
       <fieldset class="seg">
         <legend class="field__label">Kind</legend>
@@ -351,7 +354,7 @@
         <textarea id="f-photos" rows="2" placeholder="images/trips/kyoto-1.jpg&#10;one per line"></textarea>
         <div class="coords__acts">
           <label class="mini mini--file">Add a photo…<input type="file" id="f-photofile" accept="image/*" multiple hidden></label>
-          <span class="field__note" id="f-photonote">Resized in your browser, then saved for you to drop in <code>images/trips/</code>.</span>
+          <span class="field__note" id="f-photonote">Resized in your browser, then saved for you to drop in <code>images/trips/</code>. A Google Drive share link works too — paste it straight into the box above (make sure the file is shared as "Anyone with the link").</span>
         </div>
       </div>
 

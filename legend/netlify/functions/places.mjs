@@ -16,6 +16,15 @@ import { PLACES, PLACES_KEY, signedIn, configured, json } from "./_lib/legend.mj
 
 export const config = { path: "/api/places" };
 
+/* Mirrors js/store.js's normalizePhotoURL: a Drive "share" link is a viewer
+   page, not an image, so rewrite it into Drive's direct-content URL. */
+function normalizePhotoURL(u) {
+  u = String(u || "").trim();
+  const m = u.match(/^https?:\/\/(?:www\.)?drive\.google\.com\/file\/d\/([^/]+)/) ||
+    u.match(/^https?:\/\/(?:www\.)?drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([^&#]+)/);
+  return m ? "https://drive.google.com/uc?export=view&id=" + m[1] : u;
+}
+
 /* The same shape the page uses. Validated here too: the browser is not a
    trustworthy validator, and a malformed list would break every visitor's
    page, not just the one who sent it. */
@@ -25,7 +34,7 @@ function clean(p) {
   if (!name) return null;
   const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
   const photos = (Array.isArray(p.photos) ? p.photos : (p.photo ? [p.photo] : []))
-    .map((u) => String(u || "").trim()).filter(Boolean).slice(0, 24);
+    .map((u) => normalizePhotoURL(u)).filter(Boolean).slice(0, 24);
   return {
     id: String(p.id || "").slice(0, 40) || "p_" + Math.random().toString(36).slice(2, 9),
     name: name.slice(0, 200),

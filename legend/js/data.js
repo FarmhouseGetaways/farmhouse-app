@@ -340,6 +340,11 @@ LEGEND.STATES = LEGEND.STATE_ROWS.map(function (r) {
 LEGEND.STATE_BY_CODE = {};
 LEGEND.STATES.forEach(function (s) { LEGEND.STATE_BY_CODE[s.code] = s; });
 
+/* Reverse lookup by full name, lower-cased — a geocoder hands back "Utah",
+   not "UT". */
+LEGEND.STATE_BY_NAME = {};
+LEGEND.STATES.forEach(function (s) { LEGEND.STATE_BY_NAME[s.name.toLowerCase()] = s; });
+
 /* DC is tracked and shown, but "50 states" means fifty. */
 LEGEND.STATE_TOTAL = LEGEND.STATES.filter(function (s) {
   return s.code !== "DC";

@@ -592,6 +592,21 @@ select.ctl option { background: var(--ink-2); }
 }
 .form textarea { resize: vertical; }
 
+/* Place typeahead: the dropdown floats over whatever is below it rather
+   than pushing the form around as results come and go. */
+.field--combo { position: relative; }
+.suggest {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
+  margin: 0; padding: 4px; list-style: none;
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: var(--shadow); max-height: 220px; overflow-y: auto;
+}
+.suggest__item {
+  padding: 8px 10px; border-radius: 7px; cursor: pointer;
+  font-size: 13.5px; color: var(--text);
+}
+.suggest__item:hover, .suggest__item.is-active { background: rgba(94, 234, 212, .14); }
+
 .seg { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 12px; margin: 0; }
 .seg legend { padding: 0 6px; }
 .seg label { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; font-size: 13.5px; color: var(--dim); cursor: pointer; }

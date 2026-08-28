@@ -763,6 +763,135 @@ window.LEGEND = window.LEGEND || {};
     $("#f-state-wrap").hidden = $("#f-country").value !== "US";
   }
 
+  /* ------------------------------------------------------------------ *
+     Place lookup — typeahead against OpenStreetMap's free Nominatim
+     geocoder, so typing "Hurric" can turn into "Hurricane, Utah" with the
+     country, state and coordinates filled in behind it. Only wired up for
+     places on Earth — "beyond" entries have no town to look up.
+   * ------------------------------------------------------------------ */
+
+  var suggestTimer = null, suggestAbort = null, suggestResults = [], suggestActive = -1;
+
+  function suggestLabel(r) {
+    var a = r.address || {};
+    var place = a.city || a.town || a.village || a.hamlet || a.municipality ||
+      a.county || (r.display_name || "").split(",")[0];
+    /* "Hurricane, Utah" reads better than "Hurricane, Utah, United States" —
+       the country only earns its place in the label when there's no state
+       to tell the place apart instead. */
+    return [place, a.state || a.country].filter(Boolean).join(", ");
+  }
+
+  function renderSuggest() {
+    var box = $("#f-suggest");
+    if (!suggestResults.length) { box.hidden = true; box.innerHTML = ""; return; }
+    box.innerHTML = suggestResults.map(function (r, i) {
+      return '<li class="suggest__item' + (i === suggestActive ? " is-active" : "") +
+        '" role="option" id="f-suggest-' + i + '" data-idx="' + i + '"' +
+        (i === suggestActive ? ' aria-selected="true"' : "") + ">" +
+        esc(suggestLabel(r)) + "</li>";
+    }).join("");
+    box.hidden = false;
+    $("#f-name").setAttribute("aria-expanded", "true");
+    if (suggestActive >= 0) $("#f-name").setAttribute("aria-activedescendant", "f-suggest-" + suggestActive);
+    else $("#f-name").removeAttribute("aria-activedescendant");
+  }
+
+  function closeSuggest() {
+    if (suggestAbort) { suggestAbort.abort(); suggestAbort = null; }
+    clearTimeout(suggestTimer);
+    suggestResults = [];
+    suggestActive = -1;
+    $("#f-suggest").hidden = true;
+    $("#f-suggest").innerHTML = "";
+    $("#f-name").setAttribute("aria-expanded", "false");
+    $("#f-name").removeAttribute("aria-activedescendant");
+  }
+
+  function noteSuggest(msg) {
+    $("#f-suggest-note").textContent = msg || "";
+    $("#f-suggest-note").hidden = !msg;
+  }
+
+  /* Fills in the fields a lookup can answer. A country Nominatim doesn't
+     recognise, or doesn't return at all, defaults to the US rather than
+     leaving the place countryless — "no idea" is a worse answer than "the
+     likely one," and it's one click to correct. */
+  function pickSuggest(i) {
+    var r = suggestResults[i];
+    if (!r) return;
+    var a = r.address || {};
+    $("#f-name").value = suggestLabel(r) || $("#f-name").value;
+
+    var cc = String(a.country_code || "").toUpperCase();
+    var country = L.COUNTRY_BY_CODE[cc] ? cc : "US";
+    $("#f-country").value = country;
+
+    var state = "";
+    if (country === "US" && a.state) {
+      var s = L.STATE_BY_NAME[String(a.state).toLowerCase()];
+      if (s) state = s.code;
+    }
+    $("#f-state").value = state;
+
+    var lat = Number(r.lat), lng = Number(r.lon);
+    if (isFinite(lat) && isFinite(lng)) {
+      $("#f-lat").value = lat.toFixed(4);
+      $("#f-lng").value = lng.toFixed(4);
+    }
+
+    syncFormMode();
+    closeSuggest();
+    noteSuggest("");
+  }
+
+  function runSuggest(q) {
+    if (suggestAbort) suggestAbort.abort();
+    suggestAbort = new AbortController();
+    noteSuggest("Searching…");
+    fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q=" +
+      encodeURIComponent(q), { signal: suggestAbort.signal })
+      .then(function (res) { return res.ok ? res.json() : []; })
+      .then(function (list) {
+        suggestResults = Array.isArray(list) ? list : [];
+        suggestActive = suggestResults.length ? 0 : -1;
+        renderSuggest();
+        noteSuggest(suggestResults.length ? "" : "No matches — you can still save whatever you typed.");
+      })
+      .catch(function (err) {
+        if (err && err.name === "AbortError") return;
+        noteSuggest("Couldn't reach the place lookup — fill this in by hand instead.");
+      });
+  }
+
+  function onNameInput() {
+    var q = $("#f-name").value.trim();
+    clearTimeout(suggestTimer);
+    if (form.kind.value === "beyond" || q.length < 3) {
+      closeSuggest();
+      noteSuggest("");
+      return;
+    }
+    suggestTimer = setTimeout(function () { runSuggest(q); }, 350);
+  }
+
+  function onNameKeydown(e) {
+    if (!suggestResults.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      suggestActive = (suggestActive + 1) % suggestResults.length;
+      renderSuggest();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      suggestActive = (suggestActive - 1 + suggestResults.length) % suggestResults.length;
+      renderSuggest();
+    } else if (e.key === "Enter") {
+      if (suggestActive >= 0) { e.preventDefault(); pickSuggest(suggestActive); }
+    } else if (e.key === "Escape") {
+      closeSuggest();
+    }
+  }
+
   function openForm(place) {
     editingId = place ? place.id : null;
     $("#dialog-title").textContent = place ? "Edit place" : "Add a place";
@@ -781,6 +910,8 @@ window.LEGEND = window.LEGEND || {};
     $("#f-photos").value = place && place.photos ? place.photos.join("\n") : "";
     renderFormShots();
     $("#f-fav").checked = place ? place.fav : false;
+    closeSuggest();
+    noteSuggest("");
 
     syncFormMode();
     dialog.hidden = false;
@@ -792,6 +923,7 @@ window.LEGEND = window.LEGEND || {};
     dialog.hidden = true;
     dialog.classList.remove("is-peek");
     document.body.classList.remove("is-locked");
+    closeSuggest();
     if (disarmPick) { disarmPick(); disarmPick = null; }
     $("#f-pick").classList.remove("is-armed");
     $("#f-pick").textContent = "Pick on map";
@@ -828,6 +960,10 @@ window.LEGEND = window.LEGEND || {};
   function submitForm(e) {
     e.preventDefault();
     var kind = form.kind.value;
+    /* The lookup fills the country in behind the scenes; if it couldn't —
+       no match, the field left blank by hand — a place on Earth still needs
+       *a* country, and the US is the safest guess for this tracker. */
+    if (kind !== "beyond" && !$("#f-country").value) $("#f-country").value = "US";
     var data = {
       id: editingId || Store.newId(),
       name: $("#f-name").value.trim(),
@@ -1180,7 +1316,10 @@ window.LEGEND = window.LEGEND || {};
       else if (e.key === "Escape" && play.on) stopPlay();
     });
     $$("[name=kind]").forEach(function (r) {
-      r.addEventListener("change", syncFormMode);
+      r.addEventListener("change", function () {
+        syncFormMode();
+        if (form.kind.value === "beyond") { closeSuggest(); noteSuggest(""); }
+      });
     });
     $("#f-country").addEventListener("change", function () {
       syncFormMode();
@@ -1188,6 +1327,21 @@ window.LEGEND = window.LEGEND || {};
     });
     $("#f-state").addEventListener("change", function () { autoCoords(true); });
     $("#f-centre").addEventListener("click", function () { autoCoords(true); });
+
+    /* Place lookup: type, get suggestions, pick one (click or Enter) to
+       fill in the country, state and coordinates behind it. */
+    $("#f-name").addEventListener("input", onNameInput);
+    $("#f-name").addEventListener("keydown", onNameKeydown);
+    $("#f-suggest").addEventListener("mousedown", function (e) {
+      var item = e.target.closest && e.target.closest("[data-idx]");
+      if (!item) return;
+      e.preventDefault();
+      pickSuggest(Number(item.getAttribute("data-idx")));
+    });
+    document.addEventListener("click", function (e) {
+      if (!suggestResults.length) return;
+      if (e.target !== $("#f-name") && !e.target.closest("#f-suggest")) closeSuggest();
+    });
     $("#f-delete").addEventListener("click", function () {
       var p = editingId && Store.get(editingId);
       if (p && confirm("Delete " + p.name + "?")) { Store.remove(p.id); closeForm(); }
