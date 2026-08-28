@@ -202,9 +202,9 @@ is in.
 
 ## The home-screen icon's long history — it's the globe again
 
-Six rounds so far, and worth reading in full before touching `icons/*.png`
-or `tools/build-icons.mjs` again, because the obvious-looking fixes at
-several points here were tried already and didn't work.
+Seven rounds so far, and worth reading in full before touching
+`icons/*.png` or `tools/build-icons.mjs` again, because the obvious-looking
+fixes at several points here were tried already and didn't work.
 
 1. A literal screenshot of the hero globe (`tools/build-icons.mjs` loading
    `js/globe.js` and the real geography in headless Chromium) — better than
@@ -238,6 +238,17 @@ several points here were tried already and didn't work.
    of punchy's colours (tried mid-round) bleached the coastlines to flat
    white — the overlay only ever adjusts light, never colour, for exactly
    that reason.
+7. Reaction to round 6: "Better" — but the globe's own dark terminator edge
+   faded into the icon's near-black background (`--ink`, matching the page),
+   so the sphere had no visible boundary against it. Two fixes together:
+   `ICON_BG` in `tools/build-icons.mjs` changed the background to a deep
+   violet, different enough in hue from the globe's blues that the disc
+   reads as a shape against it rather than melting into the corners; and
+   the globe wrapper in `shaded()` got an inset `box-shadow` ring right at
+   the circular clip's edge, so the rim is crisp regardless of exactly how
+   well any given background happens to contrast. Belt and suspenders: the
+   colour change does most of the work, the ring means it doesn't have to
+   do all of it.
 
 If a future session finds `punchy` back in `js/globe.js` after reading that
 it was once removed (an earlier version of this file said so, from round
@@ -251,7 +262,7 @@ alone.
 
 Every icon-only round bumped the cache-busting `?v=N` on the icon URLs (in
 `index.html`, `manifest.webmanifest`, `sw.js`'s precache list) and `sw.js`'s
-`VERSION`, currently at `?v=7` / `legend-v8` — see "Mistakes already made"
+`VERSION`, currently at `?v=8` / `legend-v9` — see "Mistakes already made"
 below on why both matter, not just one. If the owner asks for another icon
 change, expect to bump both again.
 

@@ -78,9 +78,15 @@ function shaded(canvasHtml, size) {
      not colour. soft-light keeps the highlight from blowing out into a
      flat white patch the way screen did — it lightens without erasing
      what's under it. */
+  /* A crisp rim, independent of however well the background colour happens
+     to contrast — an inset box-shadow draws right at the circular clip's
+     own boundary, so the sphere has a defined edge even against a
+     background close to it in tone. */
+  var rim = Math.max(2, Math.round(size * 0.012));
   return `
   <div style="width:${size}px;height:${size}px;filter:drop-shadow(0 ${Math.round(size * 0.035)}px ${Math.round(size * 0.09)}px rgba(0,0,0,0.6))">
-    <div style="position:relative;width:100%;height:100%;border-radius:50%;overflow:hidden">
+    <div style="position:relative;width:100%;height:100%;border-radius:50%;overflow:hidden;
+                box-shadow:inset 0 0 0 ${rim}px rgba(150,180,220,.6)">
       ${canvasHtml}
       <div style="position:absolute;inset:0;pointer-events:none;
                   background:radial-gradient(circle at 30% 26%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.2) 15%, rgba(255,255,255,0) 38%);
@@ -91,11 +97,18 @@ function shaded(canvasHtml, size) {
   </div>`;
 }
 
+/* A near-black background matching the page's own --ink made the globe's
+   own dark terminator edge disappear into it — the sphere's silhouette had
+   nothing to contrast against. This is a deep violet instead: dark enough
+   to keep the same moody register, different enough in hue from the
+   globe's blues that the rim reads as an edge rather than fading out. */
+const ICON_BG = "#170f2c";
+
 function page(bodyHtml) {
   return `<!doctype html><html><head><meta charset="utf-8">
-<style>html,body{margin:0;background:#05070f}
-canvas{display:block;background:#05070f}
-.frame{display:flex;align-items:center;justify-content:center;background:#05070f;box-sizing:border-box}
+<style>html,body{margin:0;background:${ICON_BG}}
+canvas{display:block;background:${ICON_BG}}
+.frame{display:flex;align-items:center;justify-content:center;background:${ICON_BG};box-sizing:border-box}
 </style></head><body>
 ${bodyHtml}
 <script src="js/data.js"></script>
