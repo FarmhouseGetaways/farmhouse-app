@@ -54,8 +54,7 @@ window.LEGEND = window.LEGEND || {};
     ocean0: "#1c4c8c",
     ocean1: "#010308",
     land:   "#5f96e6",
-    coast:  "#dcebff",
-    rim:    "rgba(94,234,212,0.95)"
+    coast:  "#dcebff"
   };
 
   function pinColour(p) {
@@ -410,18 +409,16 @@ window.LEGEND = window.LEGEND || {};
     ctx.restore();
 
     /* A rim light, so the sphere reads as lit rather than as a flat circle.
-       At icon size it also does most of the work of saying "globe" — a
-       bright, glowing edge reads as a planet even before the continents do. */
-    ctx.beginPath();
-    ctx.arc(this.cx, this.cy, this.r, 0, Math.PI * 2);
-    ctx.strokeStyle = this.C.rim;
-    ctx.lineWidth = this.punchy ? Math.max(3, this.size * 0.018) : 1;
-    if (this.punchy) {
-      ctx.shadowColor = this.C.rim;
-      ctx.shadowBlur = this.size * 0.035;
+       Icon rendering skips it — the icon frame itself gets a border instead
+       (see build-icons.mjs), and a glowing ring around the globe on top of
+       that read as two competing outlines. */
+    if (!this.punchy) {
+      ctx.beginPath();
+      ctx.arc(this.cx, this.cy, this.r, 0, Math.PI * 2);
+      ctx.strokeStyle = this.C.rim;
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
-    ctx.stroke();
-    ctx.shadowBlur = 0;
   };
 
   Globe.prototype.frame = function (ts) {

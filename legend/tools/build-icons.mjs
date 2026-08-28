@@ -9,8 +9,15 @@
    The one deliberate difference: `{ punchy: true }` below. The hero's subtle
    night-ocean palette all but disappears at 180px on someone's home screen —
    "hard to make out what it is" was the actual complaint — so globe.js has a
-   second, bolder palette (brighter land, a thicker glowing rim, a bigger pin)
-   that only icon rendering asks for. The hero on the page is untouched.
+   second, bolder palette (brighter land, a bigger pin) that only icon
+   rendering asks for. The hero on the page is untouched.
+
+   Icon renders also skip the hero's glowing rim (globe.js's `punchy` branch
+   again) in favour of a border around the icon frame itself, drawn here as
+   a CSS border rather than in globe.js — it frames the icon, not the globe,
+   and `box-sizing: border-box` on the screenshotted element keeps the
+   exported PNG at exactly the declared size with the border inset, not
+   added on top of it.
 
    A one-off, like the other generators here: the output is committed and the
    site has no build step.
@@ -60,11 +67,18 @@ const SEED_PLACE = {
    and where the seed pin actually sits. */
 const LOOK_LAT = 12, LOOK_LNG = -85;
 
+/* Proportional rather than fixed, so the border carries the same visual
+   weight from the 180px icon up to the 512px one instead of looking thin
+   on the big renders or heavy on the small one. */
+const BORDER_COLOR = "rgba(255,255,255,0.4)";
+function borderWidth(size) { return Math.max(3, Math.round(size * 0.035)); }
+
 function page(bodyHtml) {
   return `<!doctype html><html><head><meta charset="utf-8">
 <style>html,body{margin:0;background:#05070f}
 canvas{display:block;background:#05070f}
-.frame{display:flex;align-items:center;justify-content:center;background:#05070f}
+.frame{display:flex;align-items:center;justify-content:center;background:#05070f;box-sizing:border-box}
+.iconframe{display:flex;align-items:center;justify-content:center;background:#05070f;box-sizing:border-box}
 </style></head><body>
 ${bodyHtml}
 <script src="js/data.js"></script>
@@ -105,25 +119,33 @@ async function render(html, selector, viewport, outFile) {
 }
 
 /* Full-bleed sizes: the globe itself is the whole icon, using globe.js's
-   own built-in ~7% margin. */
+   own built-in ~7% margin, with a bordered frame the exact declared size
+   wrapped around it — the canvas is untouched, the border sits on top. */
 for (const { file, size } of [
   { file: "icons/icon-512.png", size: 512 },
   { file: "icons/icon-192.png", size: 192 },
   { file: "icons/apple-touch-icon.png", size: 180 }
 ]) {
+  const bw = borderWidth(size);
   const html = page(
-    `<canvas id="g" data-globe width="${size}" height="${size}" style="width:${size}px;height:${size}px"></canvas>`);
-  await render(html, "#g", { width: size + 20, height: size + 20 }, file);
+    `<div class="iconframe" style="width:${size}px;height:${size}px;border:${bw}px solid ${BORDER_COLOR}">
+       <canvas id="g" data-globe width="${size - bw * 2}" height="${size - bw * 2}"
+               style="width:${size - bw * 2}px;height:${size - bw * 2}px"></canvas>
+     </div>`);
+  await render(html, ".iconframe", { width: size + 20, height: size + 20 }, file);
   console.log(`${file}: ${size}×${size}`);
 }
 
 /* Maskable: a 512 frame holding a 380 globe, centred — roughly a 74%
    content diameter, safely inside the ~66-80% every launcher mask leaves
-   uncropped. */
+   uncropped. The border sits on the 512 frame, same as the others; an
+   aggressive circular mask can crop more of it than on the other icons,
+   but this is also the icon least often actually seen unmasked. */
 {
   const OUTER = 512, INNER = 380;
+  const bw = borderWidth(OUTER);
   const html = page(
-    `<div class="frame" style="width:${OUTER}px;height:${OUTER}px">
+    `<div class="frame" style="width:${OUTER}px;height:${OUTER}px;border:${bw}px solid ${BORDER_COLOR}">
        <canvas id="g" data-globe width="${INNER}" height="${INNER}" style="width:${INNER}px;height:${INNER}px"></canvas>
      </div>`);
   await render(html, ".frame", { width: OUTER + 20, height: OUTER + 20 }, "icons/maskable-512.png");
