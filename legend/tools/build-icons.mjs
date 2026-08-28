@@ -1,29 +1,32 @@
 /* ==========================================================================
-   Generates icons/*.png — a mountain, a trail, and a glowing summit.
+   Generates icons/*.png from the actual hero globe.
 
-   This used to be a screenshot of the actual hero globe, kept in lockstep
-   with it on purpose. Two rounds of trying to make that read clearly at
-   180px on a home screen (a bolder palette, then a border) still weren't
-   enough — a globe just doesn't read as a shape at that size — so it became
-   a hand-drawn trail/mountain illustration instead, unrelated to js/globe.js.
+   This has gone through several looks — a plain screenshot, a bolder
+   icon-only palette with a glowing rim, a border instead of the rim, a
+   trail/mountain illustration in two different styles — and landed back on
+   the globe with the bold palette restored, plus one new thing: real
+   sphere shading.
 
-   That first illustration was a bright daytime postcard style (blue sky,
-   green mountain, thick black cartoon outlines) that didn't survive contact
-   with the owner's actual taste, and clashed with the rest of the app's own
-   dark, glowing aesthetic besides. This version keeps the same subject —
-   mountain, trail, summit — but draws it the way the rest of the site draws
-   everything: near-black, with the shape carried by glowing edges rather
-   than fill contrast or an outline. Flat fill contrast (a lighter grey
-   mountain on a dark sky) was tried first and it washed out at small sizes
-   for the same reason the globe did; a glowing outline is what actually
-   survives being shrunk to 40px, because it's the same trick the trail and
-   the summit marker already use.
+   Two separate techniques doing two separate jobs:
+   - `{ punchy: true }` (js/globe.js) swaps in a higher-contrast land/ocean
+     palette and scales up line weights and pin size for icon output. Land
+     and ocean at the hero's own subtle contrast all but merge into one
+     colour once shrunk to 40px; punchy is what makes the *shape* of the
+     continents survive that.
+   - The `shaded()` wrapper below layers a specular highlight, a terminator
+     shadow and a drop shadow on top in plain CSS, composited over the
+     real render rather than drawn into it. A flat orthographic projection
+     reads as a disc even at full contrast; the same disc with light
+     falling off toward one edge reads as a sphere.
+   Together: legible *and* looks like a lit 3D object, not just a two-tone
+   flat circle (what punchy alone produced last time) or a subtle sphere
+   nobody can make out (what shading alone on the hero's own palette
+   produced when tried first this round).
 
-   Being vector, it needs no per-size scaling math — the same markup is
-   rendered at each output's native size and stays crisp. Only the maskable
-   icon is different in kind: it draws the same artwork smaller, centred in
-   a bigger frame that repeats the sky colour to the edges, so cropping to a
-   launcher's mask shape can't eat the mountain or the summit.
+   The hero on the page passes no such flag and gets no such wrapper —
+   this is still the real geography, the real pins, the real projection,
+   just lit and coloured differently for a picture seen at a fraction of
+   the size for a fraction of the time.
 
    A one-off, like the other generators here: the output is committed and
    the site has no build step.
@@ -41,61 +44,82 @@ import { dirname, resolve } from "node:path";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 mkdirSync("icons", { recursive: true });
 
+/* Chromium refuses file:// script loads from a page with no origin of its
+   own (page.setContent lands on about:blank), so the render page has to be
+   an actual file next to the ones it loads — not content handed to the
+   browser in memory. Written once, overwritten per render, deleted after. */
 const TMP = resolve(ROOT, ".icon-render.tmp.html");
 
-const SKY_TOP = "#0c1730", SKY_BOTTOM = "#05070f";
+/* The one place that has ever been on the map by default. A single glowing
+   home pin is what the hero itself shows on a fresh install, so the icon
+   matches rather than showing an empty ocean. */
+const SEED_PLACE = {
+  id: "p_home", name: "Ramona, California", kind: "home",
+  country: "US", state: "CA", lat: 33.03, lng: -116.87,
+  date: "", notes: "", photos: [], fav: true
+};
 
-/* One 100×100 illustration, reused at every output size. Colours are the
-   app's own — --go (teal) for the ridge, --home (amber) for the trail and
-   summit — the same two accents the globe uses for "been" and "home", not
-   a palette invented for this picture. */
-function artwork() {
+/* Centred on the Americas — the most recognisable silhouette at icon sizes,
+   and where the seed pin actually sits. */
+const LOOK_LAT = 12, LOOK_LNG = -85;
+
+/* globe.js lights its own ocean gradient from the upper-left (createRadial
+   Gradient centred at -0.35r, -0.4r); the highlight and terminator below
+   are placed to match, so the extra shading reinforces the curvature
+   globe.js already implies rather than fighting it with light from a
+   different direction. */
+function shaded(canvasHtml, size) {
+  /* A wrapper around the canvas rather than a filter on it directly —
+     drop-shadow and border-radius:overflow:hidden don't compose cleanly on
+     the same element the way a highlight/terminator overlay on a parent
+     does. `punchy` (js/globe.js) already supplies the base contrast; piling
+     a brightness/contrast filter on top of that bleached the coastlines to
+     flat white instead of adding depth, so this only ever adjusts *light*,
+     not colour. soft-light keeps the highlight from blowing out into a
+     flat white patch the way screen did — it lightens without erasing
+     what's under it. */
   return `
-  <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${SKY_TOP}"/>
-      <stop offset="1" stop-color="${SKY_BOTTOM}"/>
-    </linearGradient>
-    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="2.4" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <filter id="glow-soft" x="-100%" y="-100%" width="300%" height="300%">
-      <feGaussianBlur stdDeviation="4" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-  <rect x="0" y="0" width="100" height="100" fill="url(#sky)"/>
-
-  <!-- back ridge: unlit, almost the sky colour — depth at full size,
-       invisible (harmlessly) once shrunk -->
-  <path d="M28,78 L58,20 L92,78 Z" fill="#0f1830"/>
-
-  <!-- front ridge: the shape is its outline, not its fill -->
-  <path d="M4,84 L40,18 L78,84 Z" fill="#0c1526"
-        stroke="#5eead4" stroke-width="2.1" stroke-linejoin="round" filter="url(#glow)"/>
-
-  <!-- the trail, glowing the same way the ridge does -->
-  <path d="M50,101 C41,90 58,82 42,70 C31,62 46,52 40,42 C35,34 40,28 40,20"
-        fill="none" stroke="#f5c451" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"
-        filter="url(#glow)"/>
-
-  <!-- the summit marker: a glowing dot, the same language as every place
-       marker elsewhere in the app (globe + map), not a map-pin teardrop -->
-  <circle cx="40" cy="18" r="4" fill="#fbbf24" filter="url(#glow-soft)"/>
-  <circle cx="40" cy="18" r="3.4" fill="#fff7e0"/>`;
+  <div style="width:${size}px;height:${size}px;filter:drop-shadow(0 ${Math.round(size * 0.035)}px ${Math.round(size * 0.09)}px rgba(0,0,0,0.6))">
+    <div style="position:relative;width:100%;height:100%;border-radius:50%;overflow:hidden">
+      ${canvasHtml}
+      <div style="position:absolute;inset:0;pointer-events:none;
+                  background:radial-gradient(circle at 30% 26%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.2) 15%, rgba(255,255,255,0) 38%);
+                  mix-blend-mode:soft-light"></div>
+      <div style="position:absolute;inset:0;pointer-events:none;
+                  background:radial-gradient(circle at 72% 76%, rgba(0,0,0,0) 32%, rgba(0,0,0,.5) 70%, rgba(0,0,0,.75) 100%)"></div>
+    </div>
+  </div>`;
 }
 
 function page(bodyHtml) {
   return `<!doctype html><html><head><meta charset="utf-8">
-<style>html,body{margin:0}</style></head><body>${bodyHtml}</body></html>`;
+<style>html,body{margin:0;background:#05070f}
+canvas{display:block;background:#05070f}
+.frame{display:flex;align-items:center;justify-content:center;background:#05070f;box-sizing:border-box}
+</style></head><body>
+${bodyHtml}
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/worldmap.js"></script>
+<script src="js/globe.js"></script>
+<script>
+window.__renderReady = false;
+function boot(id) {
+  var g = LEGEND.Globe.create(document.getElementById(id), { punchy: true });
+  g.setPlaces([${JSON.stringify(SEED_PLACE)}]);
+  g.lookAt(${LOOK_LAT}, ${LOOK_LNG});
+  g.pause(true);
+}
+document.querySelectorAll("canvas[data-globe]").forEach(function (c) { boot(c.id); });
+/* Two frames: the first draw happens on the rAF the constructor already
+   scheduled: give it one more tick so that has definitely landed before the
+   screenshot, since pause() only stops the *next* frame's rotation, not the
+   one already queued. */
+requestAnimationFrame(function () {
+  requestAnimationFrame(function () { window.__renderReady = true; });
+});
+</script>
+</body></html>`;
 }
 
 const browser = await chromium.launch(
@@ -105,37 +129,37 @@ async function render(html, selector, viewport, outFile) {
   writeFileSync(TMP, html);
   const p = await browser.newPage({ viewport, deviceScaleFactor: 1 });
   await p.goto("file://" + TMP);
+  await p.waitForFunction(() => window.__renderReady, { timeout: 5000 });
   const buf = await p.locator(selector).screenshot();
   writeFileSync(outFile, buf);
   await p.close();
 }
 
-/* Full-bleed sizes: the artwork's own 100×100 viewBox fills the icon
-   completely, scaled by the SVG's width/height rather than redrawn. */
+/* Full-bleed sizes: the globe itself is the whole icon, using globe.js's
+   own built-in ~7% margin, with the shading wrapper the exact declared
+   size around it. */
 for (const { file, size } of [
   { file: "icons/icon-512.png", size: 512 },
   { file: "icons/icon-192.png", size: 192 },
   { file: "icons/apple-touch-icon.png", size: 180 }
 ]) {
-  const html = page(
-    `<svg id="v" width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${artwork()}</svg>`);
-  await render(html, "#v", { width: size + 20, height: size + 20 }, file);
+  const canvasHtml = `<canvas id="g" data-globe width="${size}" height="${size}" style="width:${size}px;height:${size}px"></canvas>`;
+  const html = page(`<div id="shaded">${shaded(canvasHtml, size)}</div>`);
+  await render(html, "#shaded", { width: size + 40, height: size + 40 }, file);
   console.log(`${file}: ${size}×${size}`);
 }
 
-/* Maskable: the same artwork at 74% scale, centred in a 512 frame whose
-   background repeats the sky gradient to the edges — a launcher's mask can
-   crop the frame down to whatever shape it likes without ever touching the
-   mountain or the pin. */
+/* Maskable: a 512 frame holding a 380 globe, centred — roughly a 74%
+   content diameter, safely inside the ~66-80% every launcher mask leaves
+   uncropped. Shading wraps the inner globe, not the outer frame — a
+   maskable icon's frame is invisible letterboxing, not part of the art. */
 {
   const OUTER = 512, INNER = 380;
+  const canvasHtml = `<canvas id="g" data-globe width="${INNER}" height="${INNER}" style="width:${INNER}px;height:${INNER}px"></canvas>`;
   const html = page(
-    `<div style="width:${OUTER}px;height:${OUTER}px;display:flex;align-items:center;justify-content:center;
-                 background:linear-gradient(${SKY_TOP},${SKY_BOTTOM})">
-       <svg id="v" width="${INNER}" height="${INNER}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${artwork()}</svg>
-     </div>`);
-  await render(html, "div", { width: OUTER + 20, height: OUTER + 20 }, "icons/maskable-512.png");
-  console.log(`icons/maskable-512.png: ${OUTER}×${OUTER}, artwork at ${Math.round(INNER / OUTER * 100)}%`);
+    `<div class="frame" style="width:${OUTER}px;height:${OUTER}px">${shaded(canvasHtml, INNER)}</div>`);
+  await render(html, ".frame", { width: OUTER + 40, height: OUTER + 40 }, "icons/maskable-512.png");
+  console.log(`icons/maskable-512.png: ${OUTER}×${OUTER}, globe at ${Math.round(INNER / OUTER * 100)}%`);
 }
 
 await browser.close();

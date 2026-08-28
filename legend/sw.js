@@ -20,7 +20,7 @@
    activate, so nothing accumulates.
    ========================================================================== */
 
-var VERSION = "legend-v7";
+var VERSION = "legend-v8";
 
 var PRECACHE = [
   "./",
@@ -38,10 +38,10 @@ var PRECACHE = [
   "vendor/leaflet/leaflet.js",
   "vendor/leaflet/leaflet.css",
   "images/favicon.svg",
-  "icons/icon-192.png?v=6",
-  "icons/icon-512.png?v=6",
-  "icons/apple-touch-icon.png?v=6",
-  "icons/maskable-512.png?v=6",
+  "icons/icon-192.png?v=7",
+  "icons/icon-512.png?v=7",
+  "icons/apple-touch-icon.png?v=7",
+  "icons/maskable-512.png?v=7",
   "manifest.webmanifest",
   "data/places.json"
 ];

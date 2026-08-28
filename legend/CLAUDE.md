@@ -200,42 +200,60 @@ typing a place name it makes an outbound fetch. It has nothing to do with
 reading or saving the list, so it changes nothing about what mode `js/store.js`
 is in.
 
-## The home-screen icon stopped being the globe
+## The home-screen icon's long history — it's the globe again
 
-It went through five rounds. First it was a literal screenshot of the hero
-globe (`tools/build-icons.mjs` loading `js/globe.js` and the real geography
-in headless Chromium) — better than the original abstract mark, but still
-too subtle to read at 180px on a phone. Second, `js/globe.js` grew an
-`opts.punchy` flag with a bolder icon-only palette and a glowing rim, used
-only by the icon build. Third, the owner didn't want the globe there at all
-— asked for a trail icon instead, mountains and a path, closer to how a
-hiking app would badge itself; that became a bright daytime illustration
-(blue sky, green mountain, thick black cartoon outlines) inspired by stock
-icon references the owner sent. Fourth: "hate it" — the cartoon-postcard
-style didn't fit an otherwise dark, glowing app, so fifth, same subject
-(mountain, trail, summit) redrawn to actually look like part of this site:
-near-black, with the mountain's shape carried by a glowing teal outline
-rather than fill contrast or a black outline. Fill contrast (a lighter grey
-mountain on a dark sky) was tried in this round too and it washed out at
-icon size for the exact same reason the globe did — a glowing edge is what
-survives being shrunk to 40px, because it's the same trick the trail and
-the summit marker were already using successfully.
+Six rounds so far, and worth reading in full before touching `icons/*.png`
+or `tools/build-icons.mjs` again, because the obvious-looking fixes at
+several points here were tried already and didn't work.
 
-`tools/build-icons.mjs` no longer touches `js/globe.js` in any way: it's a
-self-contained hand-drawn SVG (a glowing mountain outline, a glowing trail,
-a glowing summit dot) rendered at each icon size, and the `punchy` flag
-that briefly existed in `js/globe.js` was reverted out since nothing calls
-it anymore. If a future session finds no trace of "punchy" in globe.js,
-that's not a regression — it was deliberately removed once the icon stopped
-being a globe at all. The one link back to the site's own palette: the
-trail/summit are drawn in the exact amber, and the ridge in the exact teal,
-`js/globe.js` uses for "home" and "been."
+1. A literal screenshot of the hero globe (`tools/build-icons.mjs` loading
+   `js/globe.js` and the real geography in headless Chromium) — better than
+   the original abstract mark, but still too subtle to read at 180px on a
+   phone.
+2. `js/globe.js` grew an `opts.punchy` flag: a bolder icon-only land/ocean
+   palette, thicker coastlines, a bigger pin, a tighter crop, and a bigger
+   glowing rim — used only by the icon build, the hero untouched.
+3. The owner asked to drop the glowing rim and add a border around the
+   icon frame instead (a plain CSS border on the screenshotted element,
+   drawn in `tools/build-icons.mjs`, not in `js/globe.js`).
+4. The owner didn't want the globe at all — asked for a trail icon instead,
+   closer to how a hiking app would badge itself. Became a bright daytime
+   illustration (blue sky, green mountain, thick black cartoon outlines)
+   modelled on stock icon references. Reaction: "hate it."
+5. Same subject, redrawn dark to match the app's own look: near-black sky,
+   the mountain's shape carried by a glowing teal outline rather than fill
+   contrast or a black outline (flat fill contrast was tried in this round
+   too, and washed out at icon size for the same reason the globe did in
+   round 1). Reaction: "Terrible" — back to the globe, please, "more 3D and
+   shaded."
+6. Where it landed: `opts.punchy` restored in `js/globe.js` exactly as in
+   round 2 (bold palette, no rim — rounds 2's rim doesn't come back, since
+   round 3 already established the frame doesn't need one), *plus*
+   `tools/build-icons.mjs` now wraps the rendered globe in a CSS specular
+   highlight, a terminator shadow, and a drop shadow, composited over the
+   canvas rather than drawn into it. Two different jobs: punchy's contrast
+   is what makes the *continents* survive being shrunk to 40px; the light/
+   dark overlay is what makes the *disc* read as a lit sphere instead of a
+   flat coin. Stacking an additional brightness/contrast CSS filter on top
+   of punchy's colours (tried mid-round) bleached the coastlines to flat
+   white — the overlay only ever adjusts light, never colour, for exactly
+   that reason.
+
+If a future session finds `punchy` back in `js/globe.js` after reading that
+it was once removed (an earlier version of this file said so, from round
+4) — that's not a merge error, it's round 6. Trust the code and this
+section over any single past sentence.
+
+The one link to the site's own palette in every round: the pin (and now the
+highlight/shadow's light direction) follows the same amber/teal `js/globe.js`
+already uses for "home" and "been" — never a palette invented for the icon
+alone.
 
 Every icon-only round bumped the cache-busting `?v=N` on the icon URLs (in
 `index.html`, `manifest.webmanifest`, `sw.js`'s precache list) and `sw.js`'s
-`VERSION`, currently at `?v=6` / `legend-v7` — see "Mistakes already made" below on
-why both matter, not just one. If the owner asks for another icon change,
-expect to bump both again.
+`VERSION`, currently at `?v=7` / `legend-v8` — see "Mistakes already made"
+below on why both matter, not just one. If the owner asks for another icon
+change, expect to bump both again.
 
 ## What's left
 
