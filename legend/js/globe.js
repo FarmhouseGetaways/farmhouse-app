@@ -104,8 +104,12 @@ window.LEGEND = window.LEGEND || {};
       lastX = pt.clientX; lastY = pt.clientY;
       moved += Math.abs(dx) + Math.abs(dy);
       /* A drag of the globe's full width should turn it about half way
-         round, which is what feels one-to-one with the surface. */
-      self.lambda -= dx * (180 / self.size);
+         round, which is what feels one-to-one with the surface. The sign
+         is the whole trick: project() adds lambda into the longitude before
+         taking sin() for x, so increasing lambda pushes whatever is centered
+         toward positive x. Dragging right must increase it, or the globe
+         turns away from the cursor instead of following it. */
+      self.lambda += dx * (180 / self.size);
       self.phi = Math.max(-72, Math.min(72, self.phi + dy * (180 / self.size)));
       if (e.cancelable) e.preventDefault();
     }
