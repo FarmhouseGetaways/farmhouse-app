@@ -1,20 +1,29 @@
 /* ==========================================================================
-   Generates icons/*.png — a mountain, a trail and a pin.
+   Generates icons/*.png — a mountain, a trail, and a glowing summit.
 
    This used to be a screenshot of the actual hero globe, kept in lockstep
    with it on purpose. Two rounds of trying to make that read clearly at
    180px on a home screen (a bolder palette, then a border) still weren't
-   enough — the owner's call in the end was that a globe just doesn't read
-   as a shape at that size, and asked for a trail/mountain icon instead,
-   which is a different picture, not a smaller globe. So this is now a
-   hand-drawn SVG illustration, unrelated to js/globe.js.
+   enough — a globe just doesn't read as a shape at that size — so it became
+   a hand-drawn trail/mountain illustration instead, unrelated to js/globe.js.
 
-   Being vector, it needs no per-size scaling math the way the globe render
-   did — the same markup is rendered at each output's native size and stays
-   crisp. Only the maskable icon is different in kind: it draws the same
-   artwork smaller, centred in a bigger frame that repeats the sky colour
-   to the edges, so cropping to a launcher's mask shape can't eat the
-   mountain or the pin.
+   That first illustration was a bright daytime postcard style (blue sky,
+   green mountain, thick black cartoon outlines) that didn't survive contact
+   with the owner's actual taste, and clashed with the rest of the app's own
+   dark, glowing aesthetic besides. This version keeps the same subject —
+   mountain, trail, summit — but draws it the way the rest of the site draws
+   everything: near-black, with the shape carried by glowing edges rather
+   than fill contrast or an outline. Flat fill contrast (a lighter grey
+   mountain on a dark sky) was tried first and it washed out at small sizes
+   for the same reason the globe did; a glowing outline is what actually
+   survives being shrunk to 40px, because it's the same trick the trail and
+   the summit marker already use.
+
+   Being vector, it needs no per-size scaling math — the same markup is
+   rendered at each output's native size and stays crisp. Only the maskable
+   icon is different in kind: it draws the same artwork smaller, centred in
+   a bigger frame that repeats the sky colour to the edges, so cropping to a
+   launcher's mask shape can't eat the mountain or the summit.
 
    A one-off, like the other generators here: the output is committed and
    the site has no build step.
@@ -34,12 +43,12 @@ mkdirSync("icons", { recursive: true });
 
 const TMP = resolve(ROOT, ".icon-render.tmp.html");
 
-const SKY_TOP = "#8fd1f0", SKY_BOTTOM = "#dff3fb";
+const SKY_TOP = "#0c1730", SKY_BOTTOM = "#05070f";
 
-/* One 100×100 illustration, reused at every output size. Colours:
-   the pin is the exact amber the app already uses for a "home" place
-   (js/globe.js's C.home) — the one deliberate link back to the site's own
-   palette in an otherwise unrelated picture. */
+/* One 100×100 illustration, reused at every output size. Colours are the
+   app's own — --go (teal) for the ridge, --home (amber) for the trail and
+   summit — the same two accents the globe uses for "been" and "home", not
+   a palette invented for this picture. */
 function artwork() {
   return `
   <defs>
@@ -47,34 +56,41 @@ function artwork() {
       <stop offset="0" stop-color="${SKY_TOP}"/>
       <stop offset="1" stop-color="${SKY_BOTTOM}"/>
     </linearGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2.4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="glow-soft" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
   <rect x="0" y="0" width="100" height="100" fill="url(#sky)"/>
 
-  <!-- sun, tucked behind the back peak for a little depth -->
-  <circle cx="83" cy="19" r="9" fill="#ffd158" stroke="#1b2b3a" stroke-width="3"/>
+  <!-- back ridge: unlit, almost the sky colour — depth at full size,
+       invisible (harmlessly) once shrunk -->
+  <path d="M28,78 L58,20 L92,78 Z" fill="#0f1830"/>
 
-  <!-- back mountain -->
-  <path d="M40,74 L74,18 L100,74 Z"
-        fill="#93a9c9" stroke="#1b2b3a" stroke-width="3.2" stroke-linejoin="round"/>
+  <!-- front ridge: the shape is its outline, not its fill -->
+  <path d="M4,84 L40,18 L78,84 Z" fill="#0c1526"
+        stroke="#5eead4" stroke-width="2.1" stroke-linejoin="round" filter="url(#glow)"/>
 
-  <!-- front mountain, with a darker facet for shape -->
-  <path d="M0,84 L34,24 L66,84 Z"
-        fill="#4f9a5c" stroke="#1b2b3a" stroke-width="3.2" stroke-linejoin="round"/>
-  <path d="M34,24 L48,50 L34,58 L22,50 Z" fill="#3c7c48"/>
+  <!-- the trail, glowing the same way the ridge does -->
+  <path d="M50,101 C41,90 58,82 42,70 C31,62 46,52 40,42 C35,34 40,28 40,20"
+        fill="none" stroke="#f5c451" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"
+        filter="url(#glow)"/>
 
-  <!-- the trail, drawn over both slopes so it reads as a path rather than
-       hiding behind the terrain -->
-  <path d="M50,101 C39,89 60,80 41,67 C29,59 45,49 34,38 C28,32 34,28 34,24"
-        fill="none" stroke="#1b2b3a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M50,101 C39,89 60,80 41,67 C29,59 45,49 34,38 C28,32 34,28 34,24"
-        fill="none" stroke="#d9a45e" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
-
-  <!-- the pin, planted on the summit where the trail ends -->
-  <g transform="translate(34,20)">
-    <path d="M0,-10 C5.5,-10 9,-6.2 9,-1.6 C9,4 0,12 0,12 C0,12 -9,4 -9,-1.6 C-9,-6.2 -5.5,-10 0,-10 Z"
-          fill="#fbbf24" stroke="#1b2b3a" stroke-width="3"/>
-    <circle cx="0" cy="-1.6" r="3.1" fill="#1b2b3a"/>
-  </g>`;
+  <!-- the summit marker: a glowing dot, the same language as every place
+       marker elsewhere in the app (globe + map), not a map-pin teardrop -->
+  <circle cx="40" cy="18" r="4" fill="#fbbf24" filter="url(#glow-soft)"/>
+  <circle cx="40" cy="18" r="3.4" fill="#fff7e0"/>`;
 }
 
 function page(bodyHtml) {

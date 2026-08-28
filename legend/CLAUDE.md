@@ -202,28 +202,40 @@ is in.
 
 ## The home-screen icon stopped being the globe
 
-It went through three rounds. First it was a literal screenshot of the hero
+It went through five rounds. First it was a literal screenshot of the hero
 globe (`tools/build-icons.mjs` loading `js/globe.js` and the real geography
 in headless Chromium) — better than the original abstract mark, but still
 too subtle to read at 180px on a phone. Second, `js/globe.js` grew an
 `opts.punchy` flag with a bolder icon-only palette and a glowing rim, used
 only by the icon build. Third, the owner didn't want the globe there at all
 — asked for a trail icon instead, mountains and a path, closer to how a
-hiking app would badge itself.
+hiking app would badge itself; that became a bright daytime illustration
+(blue sky, green mountain, thick black cartoon outlines) inspired by stock
+icon references the owner sent. Fourth: "hate it" — the cartoon-postcard
+style didn't fit an otherwise dark, glowing app, so fifth, same subject
+(mountain, trail, summit) redrawn to actually look like part of this site:
+near-black, with the mountain's shape carried by a glowing teal outline
+rather than fill contrast or a black outline. Fill contrast (a lighter grey
+mountain on a dark sky) was tried in this round too and it washed out at
+icon size for the exact same reason the globe did — a glowing edge is what
+survives being shrunk to 40px, because it's the same trick the trail and
+the summit marker were already using successfully.
 
-So `tools/build-icons.mjs` no longer touches `js/globe.js` in any way: it's
-a self-contained hand-drawn SVG (two mountains, a winding trail, a pin on
-the summit) rendered at each icon size, and the `punchy` flag in
-`js/globe.js` was reverted out since nothing calls it anymore. If a future
-session finds no trace of "punchy" in globe.js, that's not a regression —
-it was deliberately removed once the icon stopped being a globe at all. The
-one link back to the site's own palette: the pin is drawn in the exact
-amber `js/globe.js` uses for a "home" place.
+`tools/build-icons.mjs` no longer touches `js/globe.js` in any way: it's a
+self-contained hand-drawn SVG (a glowing mountain outline, a glowing trail,
+a glowing summit dot) rendered at each icon size, and the `punchy` flag
+that briefly existed in `js/globe.js` was reverted out since nothing calls
+it anymore. If a future session finds no trace of "punchy" in globe.js,
+that's not a regression — it was deliberately removed once the icon stopped
+being a globe at all. The one link back to the site's own palette: the
+trail/summit are drawn in the exact amber, and the ridge in the exact teal,
+`js/globe.js` uses for "home" and "been."
 
 Every icon-only round bumped the cache-busting `?v=N` on the icon URLs (in
 `index.html`, `manifest.webmanifest`, `sw.js`'s precache list) and `sw.js`'s
-`VERSION`, currently at v6/legend-v6 — see "Mistakes already made" below on
-why both matter, not just one.
+`VERSION`, currently at `?v=6` / `legend-v7` — see "Mistakes already made" below on
+why both matter, not just one. If the owner asks for another icon change,
+expect to bump both again.
 
 ## What's left
 
