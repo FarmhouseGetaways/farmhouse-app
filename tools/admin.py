@@ -700,6 +700,8 @@ ADMIN_JS = """<script>
         statTile("Scans", s.scans) +
         statTile("Matched", s.matched, "good") +
         statTile("Missed", s.notMatched, s.notMatched ? "warn" : "") +
+        statTile("By voice", s.resolvedByVoice, "good") +
+        statTile("By Claude", s.resolvedByClaude) +
         statTile("Confirmed", s.confirmedYes, "good") +
         statTile("Rejected", s.confirmedNo, s.confirmedNo ? "warn" : "") +
         statTile("Charges sent", s.chargesSent, "good") +
