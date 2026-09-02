@@ -116,3 +116,37 @@ if the list ever moves into EmailOctopus.
 precaches. It is computed from the files on disk at import time, before the
 build regenerates them, so a change to `APP_JS` lands one build behind
 locally and corrects itself on Netlify. Worth tidying.
+
+## Checkout activity tab — added 2 Sep 2026
+
+A fourth admin tab, **Checkout**, shows the Mini Barn Market self-checkout
+kiosk's activity: revenue, scans vs. missed items, confirm/reject counts,
+charge success/failure, and a list of what got missed with the photo kept
+for each (see `FarmhouseGetaways/mbm-checkout`'s own CLAUDE.md for the
+kiosk side of this — it's a fully separate site and repo, on purpose).
+
+- **`netlify/functions/checkout-activity.mjs`** — the only new function.
+  Gated the same way as `admin-stats.mjs` (`x-admin-key` against this
+  app's own `ADMIN_PASSWORD`), then calls the checkout site's
+  `/api/checkout-log` **server-to-server**, authenticated with two NEW
+  variables: `CHECKOUT_LOG_URL` and `CHECKOUT_LOG_KEY` (that site's own
+  `CHECKOUT_ADMIN_PASSWORD` — never this app's `ADMIN_PASSWORD` doing
+  double duty as another site's credential). See `SETUP.md` §5.
+- **A missed scan's photo is inlined as a `data:` URL** in this
+  function's response, fetched server-side from the checkout site's own
+  image endpoint. An `<img src>` on this page can't attach the custom
+  header that endpoint needs, and it's a different origin so no cookie
+  crosses either — fetching server-side and embedding sidesteps needing
+  a second cross-site image endpoint entirely. Capped at 25 photos per
+  response (`MAX_PHOTOS` in that file) so one unusually bad day can't
+  turn a dashboard load into dozens of fetches.
+- **The tab, its markup, and its JS all live in `tools/admin.py`**
+  (`pane-checkout`, the `.stat-grid`/`.stat-tile`/`.miss-row` CSS in
+  `ADMIN_CSS`, `loadCheckout()` in `ADMIN_JS`) — same file, same
+  generated-output rule as everything else here. `loadCheckout()` is
+  called from `boot()` alongside `loadStats()`/`loadInbox()`, and again
+  whenever the date picker changes.
+- **Leaving `CHECKOUT_LOG_URL`/`CHECKOUT_LOG_KEY` unset is a normal,
+  expected state**, not a bug to chase — the tab just reports it can't
+  reach the checkout site and everything else on this admin screen keeps
+  working. Don't make this a hard dependency of anything else here.

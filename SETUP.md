@@ -55,7 +55,21 @@ The account must be Business or Creator — @minibarnmarket already is.
 `instagram-refresh` rolls it every Monday and parks the fresh one in Netlify
 Blobs, so it should never expire again.
 
-## 5. Check it
+## 5. Mini Barn Market checkout activity (optional)
+
+The self-checkout kiosk is its own separate site and repo,
+`FarmhouseGetaways/mbm-checkout` — see that repo's own CLAUDE.md. This app's
+**Checkout** admin tab shows its activity log without needing a fifth site to
+remember, by calling into it server-to-server:
+
+    CHECKOUT_LOG_URL = https://<the checkout site>.netlify.app
+    CHECKOUT_LOG_KEY = the checkout site's CHECKOUT_ADMIN_PASSWORD
+
+Two variables, not this app's own `ADMIN_PASSWORD` — a password for one site
+should never double as another site's credential. Leave both unset and the
+Checkout tab just says so; nothing else here depends on it.
+
+## 6. Check it
 
 Open `/admin`, sign in. The "Is it switched on?" list turns green as each piece
 lands. Then install the app on your own phone, turn notifications on, and use

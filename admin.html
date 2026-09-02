@@ -82,6 +82,35 @@
   .adm-filter.is-on { border-color: var(--accent); color: var(--accent); }
   .warn { color: var(--mbm-red); }
   .good { color: var(--fstv); }
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    gap: .5rem; margin: .8rem 0 0;
+  }
+  .stat-tile {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--night-2); padding: .7rem .8rem;
+  }
+  .stat-tile b { display: block; font-size: 1.3rem; line-height: 1.1; }
+  .stat-tile span {
+    font-size: .58rem; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--mute-2);
+  }
+  .stat-tile.warn b { color: var(--mbm-red); }
+  .stat-tile.good b { color: var(--fstv); }
+  .miss-row {
+    display: flex; gap: .7rem; align-items: center;
+    padding: .6rem 0; border-top: 1px solid var(--line);
+  }
+  .miss-row:first-child { border-top: none; }
+  .miss-thumb {
+    width: 52px; height: 52px; border-radius: 8px; object-fit: cover;
+    background: var(--night-2); flex: none;
+  }
+  .miss-meta { flex: 1; min-width: 0; font-size: .82rem; }
+  .miss-meta .t {
+    font-size: .6rem; color: var(--mute-2); text-transform: uppercase; letter-spacing: .06em;
+  }
+  .miss-meta .said { color: var(--mute); font-style: italic; }
 </style>
 </head>
 <body>
@@ -107,6 +136,7 @@
   <nav class="adm-tabs" id="adm-tabs">
     <button class="adm-tab is-on" data-pane="inbox">Inbox <span class="pill" id="pending">0</span></button>
     <button class="adm-tab" data-pane="push">Push</button>
+    <button class="adm-tab" data-pane="checkout">Checkout</button>
     <button class="adm-tab" data-pane="status">Status</button>
   </nav>
 
@@ -172,6 +202,26 @@
             submission takes, so if it arrives the app is doing its job and
             anything still missing is on the website end.</p>
         </div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------------- -->
+    <section class="pane" id="pane-checkout">
+      <div class="sec">
+        <p class="eyebrow">Mini Barn Market</p>
+        <h1 class="big"><span id="co-revenue">&mdash;</span>
+          <span class="unit">taken this day</span></h1>
+        <label class="fine" for="co-date">Date</label>
+        <input id="co-date" type="date" style="width:100%;font:inherit;padding:.7rem .9rem;margin:.35rem 0 .8rem;border:1px solid var(--line);border-radius:10px;background:var(--night);color:var(--cream)">
+        <div class="stat-grid" id="co-stats"></div>
+
+        <h2 class="mid" style="margin-top:1.4rem">What was missed</h2>
+        <p class="fine">Scans that didn't confidently match the catalog &mdash;
+          a photo is kept for these only, so this is also the whole reason one
+          got kept.</p>
+        <div id="co-misses"></div>
+
+        <p class="fine" id="co-note">Loading&hellip;</p>
       </div>
     </section>
 
@@ -619,10 +669,65 @@
     finally { this.disabled = false; }
   });
 
+  /* ---- checkout activity (Mini Barn Market self-checkout, a separate
+     site — see checkout-activity.mjs) ---- */
+  function money(cents) { return "$" + (Number(cents || 0) / 100).toFixed(2); }
+  function timeStr(ts) { return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+
+  function statTile(label, value, kind) {
+    return '<div class="stat-tile' + (kind ? " " + kind : "") + '"><b>' + esc(value) +
+           '</b><span>' + esc(label) + '</span></div>';
+  }
+
+  function missRow(e) {
+    var thumb = e.photoDataUrl
+      ? '<img class="miss-thumb" src="' + e.photoDataUrl + '" alt="">'
+      : '<div class="miss-thumb"></div>';
+    return '<div class="miss-row">' + thumb +
+      '<div class="miss-meta"><div class="t">' + esc(timeStr(e.ts)) + ' &middot; confidence: ' + esc(e.confidence) + '</div>' +
+      '<div>' + esc(e.proposedName || "(nothing proposed)") + '</div>' +
+      '<div class="said">' + (e.spokenText ? "Said: \u201c" + esc(e.spokenText) + "\u201d" : "(nothing said)") + '</div>' +
+      '</div></div>';
+  }
+
+  async function loadCheckout() {
+    var dateVal = document.getElementById("co-date").value;
+    note("co-note", "Loading\u2026");
+    try {
+      var res = await api("checkout-activity" + (dateVal ? "?date=" + encodeURIComponent(dateVal) : ""));
+      var d = await res.json();
+      if (!d.ok) { note("co-note", d.error || "Could not load checkout activity."); return; }
+      if (!document.getElementById("co-date").value) document.getElementById("co-date").value = d.date;
+
+      var s = d.summary || {};
+      document.getElementById("co-revenue").textContent = money(s.revenueCents);
+      document.getElementById("co-stats").innerHTML =
+        statTile("Scans", s.scans) +
+        statTile("Matched", s.matched, "good") +
+        statTile("Missed", s.notMatched, s.notMatched ? "warn" : "") +
+        statTile("Confirmed", s.confirmedYes, "good") +
+        statTile("Rejected", s.confirmedNo, s.confirmedNo ? "warn" : "") +
+        statTile("Charges sent", s.chargesSent, "good") +
+        statTile("Charges failed", s.chargesFailed, s.chargesFailed ? "warn" : "");
+
+      var misses = (d.events || []).filter(function (e) { return e.type === "scan" && !e.matchedProductId; });
+      document.getElementById("co-misses").innerHTML = misses.length
+        ? misses.map(missRow).join("")
+        : '<p class="fine">Nothing missed this day.</p>';
+
+      note("co-note", (d.events || []).length ? (d.events.length + " events logged this day.") : "Nothing logged this day.");
+    } catch (err) {
+      note("co-note", "Could not reach the checkout site.");
+    }
+  }
+
+  document.getElementById("co-date").addEventListener("change", loadCheckout);
+
   /* ---- sign in / out ---- */
   async function boot() {
     if (!(await loadStats())) return false;
     loadInbox();
+    loadCheckout();
     return true;
   }
   document.getElementById("signin").addEventListener("click", async function () {
