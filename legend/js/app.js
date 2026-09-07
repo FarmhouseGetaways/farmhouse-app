@@ -674,10 +674,12 @@ window.LEGEND = window.LEGEND || {};
     var p = play.seq[play.i];
     L.Map.render(play.seq.slice(0, play.i + 1), { showPath: true, fit: false });
     L.Map.caption(playCaption(), ((play.i + 1) / play.seq.length) * 100);
-    /* Zoom 3 keeps the hop that just happened on screen. Closer than that and
-       every stop looks the same: a pin in the middle of an empty frame. */
-    if (play.i === 0) L.Map.jumpTo(p.lat, p.lng, 3);
-    else L.Map.flyTo(p.lat, p.lng, 3);
+    /* No forced zoom: whatever level the map was at when Play was pressed —
+       zoomed out for the whole route or zoomed in on one region — is the
+       level it travels at. Forcing zoom 3 here used to reset a close-in view
+       back out to the whole world on every single step. */
+    if (play.i === 0) L.Map.jumpTo(p.lat, p.lng);
+    else L.Map.flyTo(p.lat, p.lng);
     if (globe) globe.lookAt(p.lat, p.lng);
 
     play.timer = setTimeout(function () {
@@ -1024,16 +1026,65 @@ window.LEGEND = window.LEGEND || {};
      Wiring
    * ------------------------------------------------------------------ */
 
+  /* Clicking a state, a country, a globe pin or a timeline row used to
+     scroll the whole page back up to the shared map and focus a pin there —
+     fine for one place, disorienting once there are twenty. Each place now
+     gets its own page instead: title, where and when, the story, and just
+     its own photos. The URL hash is the router — #/place/ID — so the back
+     button, a bookmark and a shared link all just work. */
   function showPlace(id) {
     var p = Store.get(id);
     if (!p) return;
+    if (p.lat === null) {
+      alert(p.name + " has no coordinates yet — edit it and pick a spot on the map.");
+      return;
+    }
+    location.hash = "/place/" + encodeURIComponent(id);
+  }
+
+  function renderPlacePage(p) {
+    var country = p.country && L.COUNTRY_BY_CODE[p.country];
+    var state = p.state && L.STATE_BY_CODE[p.state];
+    var bits = [];
+    if (state) bits.push(esc(state.name));
+    if (country) bits.push(esc(country.name));
+    if (p.kind === "beyond" && p.realm) {
+      var realm = L.REALMS.filter(function (r) { return r.code === p.realm; })[0];
+      if (realm) bits.push(esc(realm.name));
+    }
+    $("#place-flag").textContent = p.kind === "beyond" ? "✧" : flag(p.country);
+    $("#place-title").textContent = p.name + (p.fav ? " ★" : "");
+    $("#place-sub").textContent = bits.join(" · ");
+    $("#place-date").textContent = p.date ? L.fmtDate(p.date) : "";
+    $("#place-date").hidden = !p.date;
+    $("#place-notes").textContent = p.notes || "";
+    $("#place-notes").hidden = !p.notes;
+    $("#place-gallery").innerHTML = (p.photos || []).map(function (src, i) {
+      return '<button type="button" class="wall__item" data-shot="' + esc(p.id) +
+        '" data-shot-i="' + i + '"><img src="' + esc(src) + '" alt="" loading="lazy"></button>';
+    }).join("");
+  }
+
+  /* The hash router. Everything else on the page is one long scroll inside
+     <main>; a place page is the one exception, so entering it hides every
+     other direct child of <main> rather than needing a second template. */
+  function placeRoute() {
+    var m = /^#\/place\/(.+)$/.exec(location.hash);
+    var page = $("#place-page");
+    var siblings = $$("#top > section").filter(function (s) { return s !== page; });
+    if (!m) {
+      page.hidden = true;
+      siblings.forEach(function (s) { s.hidden = s.id === "wall-section" ? s.hidden : false; });
+      return false;
+    }
+    var p = Store.get(decodeURIComponent(m[1]));
+    if (!p) { location.hash = ""; return true; }
     stopPlay();
-    document.getElementById("map-section").scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(function () {
-      if (!L.Map.focus(id, 6) && p.lat === null) {
-        alert(p.name + " has no coordinates yet — edit it and pick a spot on the map.");
-      }
-    }, 400);
+    renderPlacePage(p);
+    siblings.forEach(function (s) { s.hidden = true; });
+    page.hidden = false;
+    window.scrollTo(0, 0);
+    return true;
   }
 
   /* ------------------------------------------------------------------ *
@@ -1532,7 +1583,18 @@ window.LEGEND = window.LEGEND || {};
       else window.addEventListener("load", register);
     }
 
-    Store.load().then(checkSession);
+    $("#place-back").addEventListener("click", function () {
+      /* A place reached by a link (no page before it in this tab's history)
+         has nowhere to go back to — clear the hash directly rather than
+         leaving the back button stranded on someone else's page. */
+      if (history.length > 1) history.back(); else location.hash = "";
+    });
+    window.addEventListener("hashchange", placeRoute);
+
+    Store.load().then(function () {
+      checkSession();
+      placeRoute();
+    });
   }
 
   if (document.readyState === "loading") {

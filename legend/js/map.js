@@ -374,8 +374,11 @@ window.LEGEND = window.LEGEND || {};
       return true;
     },
 
+    /* Zoom is optional on purpose: Leaflet keeps the current zoom when none
+       is given, which is what lets playback travel at whatever level the
+       map was already at instead of snapping to a fixed one on every hop. */
     flyTo: function (lat, lng, zoom) {
-      if (map) map.flyTo([lat, lng], zoom || 5, { duration: 0.8 });
+      if (map) map.flyTo([lat, lng], zoom, { duration: 0.8 });
     },
 
     /* Arm click-to-pick. Returns a function that disarms it. */
@@ -399,9 +402,10 @@ window.LEGEND = window.LEGEND || {};
         '<span class="cap__bar" style="--p:' + (progress || 0) + '%"></span>';
     },
 
-    /* Centre without the flight, for the first frame of a playback. */
+    /* Centre without the flight, for the first frame of a playback. Zoom
+       optional for the same reason as flyTo above. */
     jumpTo: function (lat, lng, zoom) {
-      if (map) map.setView([lat, lng], zoom || 4, { animate: false });
+      if (map) map.setView([lat, lng], zoom, { animate: false });
     },
 
     invalidate: function () { if (map) map.invalidateSize(); }
