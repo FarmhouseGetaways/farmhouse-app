@@ -47,6 +47,14 @@ window.LEGEND = window.LEGEND || {};
       label: "Terrain",
       url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}",
       attrib: "Tiles &copy; Esri — Source: US National Park Service", max: 8
+    },
+    /* The familiar streets-and-labels look — same free, keyless ArcGIS Online
+       family as the other three, just the road basemap instead of canvas/
+       imagery/relief. This is the "looks like a normal map app" toggle. */
+    roads: {
+      label: "Roads",
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      attrib: "Tiles &copy; Esri — HERE, Garmin, USGS, NGA, EPA", max: 19
     }
   };
 
@@ -61,6 +69,7 @@ window.LEGEND = window.LEGEND || {};
   var caption = null;
   var currentStyle = "night";
   var onSelect = null;
+  var renderGen = 0;
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -124,6 +133,63 @@ window.LEGEND = window.LEGEND || {};
       ]);
     }
     return pts;
+  }
+
+  /* Real driving directions, when they can be had.
+
+     OSRM's public demo server is the free, keyless option — the same
+     category of best-effort service already relied on for tiles (see the
+     Esri note above), not a guarantee, but the routes it returns actually
+     follow interstates and roads instead of a straight bend through the
+     air. A hop it can't drive (an ocean, a strait, a rate limit, a network
+     hiccup) rejects and the caller falls back to the quadratic arc — this
+     never blocks the map on a slow or unreachable third party. Results are
+     cached by rounded endpoint coordinates so re-rendering the same year
+     filter twice doesn't refetch. */
+  var ROUTE_CACHE = {};
+  function routeKey(a, b) {
+    return a.lat.toFixed(3) + "," + a.lng.toFixed(3) + ">" +
+           b.lat.toFixed(3) + "," + b.lng.toFixed(3);
+  }
+  function drivingRoute(a, b) {
+    var key = routeKey(a, b);
+    if (ROUTE_CACHE[key]) return ROUTE_CACHE[key];
+    var url = "https://router.project-osrm.org/route/v1/driving/" +
+      a.lng + "," + a.lat + ";" + b.lng + "," + b.lat +
+      "?overview=full&geometries=geojson";
+    var p = fetch(url).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (out) {
+        var coords = out && out.code === "Ok" && out.routes && out.routes[0] &&
+          out.routes[0].geometry && out.routes[0].geometry.coordinates;
+        if (!coords || coords.length < 2) return null;
+        /* GeoJSON is [lng, lat]; Leaflet wants [lat, lng]. */
+        return coords.map(function (c) { return [c[1], c[0]]; });
+      })
+      .catch(function () { return null; });
+    ROUTE_CACHE[key] = p;
+    return p;
+  }
+
+  /* Draws a hop as the arc immediately (so the map is never waiting on a
+     third party to show a route at all), then swaps it for the real driving
+     route the moment OSRM answers — same two-layer glow + dash look either
+     way, so the upgrade is invisible except that the line now bends with
+     the road. */
+  function drawHop(a, b, gen) {
+    var glow = window.L.polyline(arc(a, b), {
+      className: "route route--glow", weight: 6, opacity: 0.18,
+      color: "#5eead4", interactive: false
+    }).addTo(pathLayer);
+    var line = window.L.polyline(arc(a, b), {
+      className: "route", weight: 1.4, opacity: 0.85,
+      color: "#5eead4", dashArray: "5 7", interactive: false
+    }).addTo(pathLayer);
+
+    drivingRoute(a, b).then(function (pts) {
+      if (!pts || gen !== renderGen) return;   // stale, or nothing drivable
+      glow.setLatLngs(pts);
+      line.setLatLngs(pts);
+    });
   }
 
   function icon(p) {
@@ -255,6 +321,12 @@ window.LEGEND = window.LEGEND || {};
       pathLayer.clearLayers();
       markers = {};
 
+      /* Renders overlap in time (a route fetch from the previous render can
+         still be in flight when a year filter fires a new one) — this token
+         lets a late-arriving fetch recognise it is stale and drop itself
+         rather than draw a route onto a map that has already moved on. */
+      var gen = ++renderGen;
+
       var pinned = list.filter(function (p) {
         return p.lat !== null && p.lng !== null;
       });
@@ -265,6 +337,13 @@ window.LEGEND = window.LEGEND || {};
           title: p.name,
           riseOnHover: true
         }).bindPopup(popup(p), { className: "pop-wrap", maxWidth: 260 });
+        /* A permanent label next to every pin — relying on the basemap's own
+           city labels left rural stops (a national park, a lake) silently
+           unlabelled while anything near a big city looked fine by accident. */
+        m.bindTooltip(esc(p.name), {
+          permanent: true, direction: "top", offset: [0, -13],
+          className: "pin-label" + (p.fav ? " pin-label--fav" : "")
+        });
         m.addTo(pinLayer);
         markers[p.id] = m;
       });
@@ -275,15 +354,7 @@ window.LEGEND = window.LEGEND || {};
           return p.date && p.kind !== "planned";
         }).sort(L.Store.byDate);
         for (var i = 1; i < seq.length; i++) {
-          var pts = arc(seq[i - 1], seq[i]);
-          window.L.polyline(pts, {
-            className: "route route--glow", weight: 6, opacity: 0.18,
-            color: "#5eead4", interactive: false
-          }).addTo(pathLayer);
-          window.L.polyline(pts, {
-            className: "route", weight: 1.4, opacity: 0.85,
-            color: "#5eead4", dashArray: "5 7", interactive: false
-          }).addTo(pathLayer);
+          drawHop(seq[i - 1], seq[i], gen);
         }
       }
 

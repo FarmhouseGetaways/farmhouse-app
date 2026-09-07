@@ -338,6 +338,25 @@ select.ctl option { background: var(--ink-2); }
 .pin--pick i { background: #fff; box-shadow: 0 0 16px #fff; }
 .pin--pick::before { border-color: #fff; }
 
+/* A permanent name tag on every pin, not just the ones near a city the
+   basemap happens to label. Leaflet's own tooltip chrome (white box, arrow)
+   is reset first so this reads as part of the map, not a browser widget. */
+.leaflet-tooltip.pin-label {
+  background: rgba(5, 7, 15, 0.82);
+  border: 1px solid var(--line-2);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  box-shadow: none;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.leaflet-tooltip.pin-label::before { display: none; }
+.leaflet-tooltip.pin-label.pin-label--fav { border-color: var(--fav); color: var(--fav); }
+
 @media (prefers-reduced-motion: reduce) {
   .pin::before { animation: none; }
   .hero__glow { animation: none; }
