@@ -229,7 +229,6 @@ window.LEGEND = window.LEGEND || {};
     if (p.date) html += '<p class="pop__date">' + esc(L.fmtDate(p.date)) + "</p>";
     if (p.notes) html += '<p class="pop__notes">' + esc(p.notes) + "</p>";
     html += '<span class="pop__acts">' +
-      '<button type="button" class="pop__btn" data-card="' + esc(p.id) + '">Save a card</button>' +
       '<button type="button" class="pop__btn" data-edit="' + esc(p.id) + '">Edit</button>' +
       "</span>";
     html += "</div>";

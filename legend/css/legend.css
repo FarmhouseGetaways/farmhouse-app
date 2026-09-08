@@ -578,7 +578,9 @@ select.ctl option { background: var(--ink-2); }
 /* ---------------------------------------------------------------- dialog */
 
 .dialog {
-  position: fixed; inset: 0; z-index: 200; padding: 22px; overflow: auto;
+  /* Same reasoning as .lightbox above: Leaflet's popup pane is z-index 700,
+     so opening Edit from a map popup needs this higher to actually cover it. */
+  position: fixed; inset: 0; z-index: 1000; padding: 22px; overflow: auto;
   display: grid; place-items: center;
   background: rgba(3, 5, 12, .74); backdrop-filter: blur(8px);
 }
@@ -863,7 +865,10 @@ button.stamp:hover { transform: rotate(0deg) scale(1.05); opacity: 1; }
 
 /* Lightbox */
 .lightbox {
-  position: fixed; inset: 0; z-index: 300; display: grid;
+  /* Above Leaflet's own panes (its popup pane sits at z-index 700) — without
+     this, opening a photo from a map popup left the popup's card floating
+     on top of the enlarged photo instead of underneath it. */
+  position: fixed; inset: 0; z-index: 1000; display: grid;
   grid-template-columns: auto 1fr auto; align-items: center; gap: 8px;
   padding: 24px; background: rgba(2, 4, 10, .93); backdrop-filter: blur(6px);
 }

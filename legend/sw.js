@@ -20,7 +20,7 @@
    activate, so nothing accumulates.
    ========================================================================== */
 
-var VERSION = "legend-v12";
+var VERSION = "legend-v13";
 
 var PRECACHE = [
   "./",
