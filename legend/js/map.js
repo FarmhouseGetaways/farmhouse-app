@@ -192,6 +192,12 @@ window.LEGEND = window.LEGEND || {};
     });
   }
 
+  /* The pin carries data-place itself, so a click on it is caught by the
+     same page-wide [data-place] delegation app.js already uses for a state
+     tile, a country, a globe pin or a timeline row — one navigation path
+     for all of them, straight to that place's own page. This also sidesteps
+     Leaflet's own marker click plumbing entirely, which is deliberate: a
+     bound popup here used to intermittently eat the first click. */
   function icon(p) {
     var kind = p.kind === "home" ? "home"
              : p.kind === "beyond" ? "beyond"
@@ -199,40 +205,10 @@ window.LEGEND = window.LEGEND || {};
     var cls = "pin pin--" + kind + (p.fav ? " pin--fav" : "");
     return window.L.divIcon({
       className: "pin-wrap",
-      html: '<span class="' + cls + '"><i></i></span>',
+      html: '<span class="' + cls + '" data-place="' + esc(p.id) + '"><i></i></span>',
       iconSize: [22, 22],
-      iconAnchor: [11, 11],
-      popupAnchor: [0, -12]
+      iconAnchor: [11, 11]
     });
-  }
-
-  function popup(p) {
-    var country = p.country && L.COUNTRY_BY_CODE[p.country];
-    var state = p.state && L.STATE_BY_CODE[p.state];
-    var bits = [];
-    if (state) bits.push(esc(state.name));
-    if (country) bits.push(esc(country.name));
-    if (p.kind === "beyond" && p.realm) {
-      var realm = L.REALMS.filter(function (r) { return r.code === p.realm; })[0];
-      if (realm) bits.push(esc(realm.name));
-    }
-
-    var html = '<div class="pop">';
-    if (p.photos && p.photos.length) {
-      html += '<span class="pop__shots">' + p.photos.slice(0, 3).map(function (src, i) {
-        return '<img class="pop__img" src="' + esc(src) + '" alt="" loading="lazy" ' +
-          'data-shot="' + esc(p.id) + '" data-shot-i="' + i + '">';
-      }).join("") + "</span>";
-    }
-    html += '<h4 class="pop__title">' + esc(p.name) + (p.fav ? ' <span class="pop__star">★</span>' : '') + '</h4>';
-    if (bits.length) html += '<p class="pop__where">' + bits.join(" · ") + "</p>";
-    if (p.date) html += '<p class="pop__date">' + esc(L.fmtDate(p.date)) + "</p>";
-    if (p.notes) html += '<p class="pop__notes">' + esc(p.notes) + "</p>";
-    html += '<span class="pop__acts">' +
-      '<button type="button" class="pop__btn" data-edit="' + esc(p.id) + '">Edit</button>' +
-      "</span>";
-    html += "</div>";
-    return html;
   }
 
   var Map = {
@@ -335,14 +311,19 @@ window.LEGEND = window.LEGEND || {};
           icon: icon(p),
           title: p.name,
           riseOnHover: true
-        }).bindPopup(popup(p), { className: "pop-wrap", maxWidth: 260 });
+        });
         /* A permanent label next to every pin — relying on the basemap's own
            city labels left rural stops (a national park, a lake) silently
-           unlabelled while anything near a big city looked fine by accident. */
-        m.bindTooltip(esc(p.name), {
-          permanent: true, direction: "top", offset: [0, -13],
-          className: "pin-label" + (p.fav ? " pin-label--fav" : "")
-        });
+           unlabelled while anything near a big city looked fine by accident.
+           It carries the same data-place as the pin, so tapping the label
+           itself (not just the dot) also opens that place's page. */
+        m.bindTooltip(
+          '<span data-place="' + esc(p.id) + '">' + esc(p.name) + '</span>',
+          {
+            permanent: true, direction: "top", offset: [0, -13], interactive: true,
+            className: "pin-label" + (p.fav ? " pin-label--fav" : "")
+          }
+        );
         m.addTo(pinLayer);
         markers[p.id] = m;
       });
@@ -369,7 +350,6 @@ window.LEGEND = window.LEGEND || {};
       var m = markers[id];
       if (!m) return false;
       map.flyTo(m.getLatLng(), zoom || Math.max(map.getZoom(), 5), { duration: 0.8 });
-      m.openPopup();
       return true;
     },
 

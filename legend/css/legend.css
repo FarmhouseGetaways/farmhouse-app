@@ -352,7 +352,7 @@ select.ctl option { background: var(--ink-2); }
   border-radius: 999px;
   box-shadow: none;
   white-space: nowrap;
-  pointer-events: none;
+  cursor: pointer;
 }
 .leaflet-tooltip.pin-label::before { display: none; }
 .leaflet-tooltip.pin-label.pin-label--fav { border-color: var(--fav); color: var(--fav); }
@@ -828,13 +828,18 @@ button.stamp:hover { transform: rotate(0deg) scale(1.05); opacity: 1; }
 /* ---------------------------------------------------------------- one place, its own page */
 
 .section--place { padding-top: 8px; }
-.place__back {
-  display: inline-flex; align-items: center; gap: 6px; color: var(--dim);
-  font-size: 13px; text-decoration: none; margin-bottom: 22px; cursor: pointer;
+.place__back--pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--card); border: 1px solid var(--line-2); color: var(--text);
+  font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer;
+  padding: 8px 18px 8px 14px; border-radius: 999px; margin-bottom: 26px;
+  transition: background .15s ease, border-color .15s ease;
 }
-.place__back:hover { color: var(--text); }
-.place__head { display: flex; align-items: center; gap: 16px; margin-bottom: 6px; }
+.place__back--pill:hover { background: var(--card-2); border-color: var(--go); color: var(--go); }
+.place__head { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 6px; }
+.place__head > div { flex: 1; min-width: 0; }
 .place__flag { font-size: 40px; line-height: 1; }
+.place__edit { margin-left: auto; }
 #place-title { font-size: clamp(28px, 4.2vw, 44px); margin: 0 0 4px; }
 .place__sub { color: var(--go); font-size: 14px; margin: 0; }
 .place__date { color: var(--dim); font-size: 13px; margin: 10px 0 0; }
@@ -919,6 +924,7 @@ body:not(.is-editing) #add,
 body:not(.is-editing) #add-2,
 body:not(.is-editing) #data,
 body:not(.is-editing) .pop__btn[data-edit],
+body:not(.is-editing) #place-edit,
 body:not(.is-editing) .row__acts [data-edit],
 body:not(.is-editing) .row__acts [data-del] { display: none !important; }
 

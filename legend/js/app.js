@@ -1052,6 +1052,7 @@ window.LEGEND = window.LEGEND || {};
       var realm = L.REALMS.filter(function (r) { return r.code === p.realm; })[0];
       if (realm) bits.push(esc(realm.name));
     }
+    $("#place-edit").setAttribute("data-id", p.id);
     $("#place-flag").textContent = p.kind === "beyond" ? "✧" : flag(p.country);
     $("#place-title").textContent = p.name + (p.fav ? " ★" : "");
     $("#place-sub").textContent = bits.join(" · ");
@@ -1588,6 +1589,9 @@ window.LEGEND = window.LEGEND || {};
          has nowhere to go back to — clear the hash directly rather than
          leaving the back button stranded on someone else's page. */
       if (history.length > 1) history.back(); else location.hash = "";
+    });
+    $("#place-edit").addEventListener("click", function () {
+      openForm(Store.get(this.getAttribute("data-id")));
     });
     window.addEventListener("hashchange", placeRoute);
 
