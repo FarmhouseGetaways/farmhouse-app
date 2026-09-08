@@ -148,7 +148,7 @@ window.LEGEND = window.LEGEND || {};
   var countryOnlyVisited = false;
   /* Every continent's country grid starts collapsed except North America —
      home turf, and the one anyone actually opens the page to look at. */
-  var openContinents = { NA: true };
+  var openContinents = {};
 
   function renderCountries(s) {
     var host = $("#countries");
@@ -201,9 +201,9 @@ window.LEGEND = window.LEGEND || {};
      The geographic map answers "where have I been" — which corner of the
      country is still dark. The choice is remembered per browser. */
   var USVIEW_KEY = "legend.usview";
-  var usView = "tiles";
-  try { usView = localStorage.getItem(USVIEW_KEY) || "tiles"; } catch (e) {}
-  if (usView !== "map") usView = "tiles";
+  var usView = "map";
+  try { usView = localStorage.getItem(USVIEW_KEY) || "map"; } catch (e) {}
+  if (usView !== "tiles") usView = "map";
 
   var SUBS = {
     tiles: "One square per state — Rhode Island counts as much as Texas.",

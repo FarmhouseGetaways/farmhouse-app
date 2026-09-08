@@ -276,13 +276,142 @@ Every icon-only round bumped the cache-busting `?v=N` on the icon URLs (in
 below on why both matter, not just one. If the owner asks for another icon
 change, expect to bump both again.
 
+## 2026-09-07/08 — went fully live, feature pass, Arizona photo sweep
+
+**`legenddzbinski.com` is live** — DNS pointed at this Netlify site.
+DirectNic (the registrar) had a stale "Redirect url" forwarding aimed at an
+unrelated Wix site left over from a different project; that had to be
+switched off and replaced with real A/CNAME records before the domain would
+serve this site instead of redirecting away from it. Check that forwarding
+setting first if this domain ever mysteriously stops pointing here again.
+
+Shipped in the same stretch, all live and verified against the deployed
+site (not just committed):
+
+- **Per-place pages.** `#/place/<id>` hash routes; tapping a pin, a pin's
+  permanent label, or a "view details" link goes straight to a page with
+  title, dates, notes and photo gallery — replacing the old Leaflet popup
+  entirely (see "Mistakes already made" #8 below for why popups had to go).
+- **`flight` boolean field** on place objects. A place with `flight: true`
+  draws its incoming route as a light, widely-dashed arc and skips the OSRM
+  road-following fetch, instead of drawing a teal road line for a trip that
+  was actually flown. Validated in both `js/store.js` and
+  `netlify/functions/places.mjs` `clean()` — same belt-and-suspenders
+  pattern as every other field.
+- **Journey playback preserves whatever zoom the map is already at**
+  instead of resetting to a fixed zoom on every stop — `flyTo`/`jumpTo` in
+  `js/map.js` now pass `zoom` through as-is rather than hardcoding it.
+- **Country tiles collapse by continent**, North America open by default,
+  click the arrow to expand — cuts down the wall of tiles on the World tab.
+- **The globe can be rotated but not tapped to navigate.** `L.Globe.create`
+  is called with no `onSelect` option now; the hero hint text was "Drag to
+  spin · tap a pin" and is now just "Drag to spin."
+- **All favourites were cleared** site-wide, at the owner's request — no
+  fav star shows anywhere right now. "We can build a favourites page later"
+  was floated but never scoped; if that comes up again it's a fresh feature,
+  not a restore of the old fav display.
+
+**Mistakes already made — #8, added this round**: **removing the Leaflet
+popup and using synthetic clicks on markers is not the same as making them
+clickable.** Setting `interactive: false` on a marker to "let native click
+bubbling handle it" instead actually strips Leaflet's own
+`leaflet-interactive` class, which triggers `leaflet.css`'s own rule
+`.leaflet-marker-icon { pointer-events: none; }` — the marker becomes
+completely unclickable, full stop. The fix was simply not setting
+`interactive: false` (`true` is the default) and instead wrapping the
+tooltip/label content in `<span data-place="ID">` so a click handler on the
+map container can read `data-place` off `e.target.closest(...)`. If pins
+ever go unclickable again after a popup-removal change, check this first.
+
+**Mistake #9: a `PUT /api/places` that returns `{"ok":true}` is not proof
+the write is visible yet.** Observed roughly a 1-second read-after-write lag
+against the Netlify Blob store — an immediate `GET` right after a successful
+PUT can still show the old data, which looks exactly like a silently failed
+write. Wait a beat and re-check with a fresh (`cache: 'no-store'`) fetch
+before concluding a write didn't take, especially when scripting several
+places-list edits in a row from the browser console.
+
+**Arizona photo sweep**: added four new 2019+ places from Cory's iCloud
+library, all with Legend visually confirmed present (not just a location
+match) — **Goldfield Ghost Town** (Apache Junction, Dec 2020), **Saddlebrooke**
+(grandparents' place near Tucson, `kind: home` since it's a recurring visit
+across Dec 2019/2022/2024), **Arizona-Sonora Desert Museum** (Tucson, Dec
+2022), and **Paradise Valley** (a Camelback-area resort with a stone
+labyrinth, visited Dec 2020 and Jun 2021). Every other Phoenix-area photo
+collection checked turned out to be either adult-only content (a work
+awards event, a spa visit — correctly excluded, no kid in frame) or more
+photos from a place already added (Saddlebrooke, mostly) — so this sweep is
+now closed except for one Memory ("Golden Hour," 2022) whose location
+couldn't be pinned down at all despite real effort; that one was left
+alone rather than guessed at.
+
+**A useful technique surfaced doing that sweep**: iCloud Photos' "Memory"
+movie playback (the auto-playing slideshow you get from double-clicking a
+Memory tile) was completely broken for an entire session — every single
+Memory got stuck on its title-card loading spinner forever, and it froze
+the whole tab hard twice. The reliable alternative: binary-search the
+Library grid's `scrollTop` against the date shown in its header
+(`.Typography-gridHeaderTitle`, inside the `.grid-scroll` element in the
+photos3 iframe) to jump straight to a known date — two `(scrollTop, date)`
+readings give you a day/month rate to interpolate from, and it converges to
+the exact day in about 4-5 jumps. Works even when Memory playback doesn't,
+and it shows the real underlying photos immediately instead of a slideshow.
+Full technique in the farmhouse-app memory notes (not part of this repo).
+
+## 2026-09-08 continued — same-night follow-up fixes
+
+The owner caught these by eye right after the Arizona sweep went live:
+
+- **A flight's return leg was still drawing a road.** `drawHop(a, b)` keys
+  the flight/road choice off **`b.flight`** — the *destination's* flag, not
+  the origin's. Setting `flight: true` on Riviera Maya (Cancún) only fixes
+  the *inbound* hop into Cancún; the very next hop *out* of Cancún is keyed
+  off whatever place comes chronologically after it, and that place almost
+  certainly wasn't flagged, so it tried to OSRM-route an actual road home
+  from the Yucatán. **Whenever a place is a fly-in, check whether the next
+  chronological stop also needs `flight: true`** — it's the round-trip
+  return leg, not the same field, that governs it. Fixed by flagging
+  `p_lonepine_2024` (the next stop after Cancún), not by touching Cancún
+  again.
+- **Two of the four new Arizona place names got simplified**: "Saddlebrooke,
+  Arizona" → **"Tucson, Arizona"**, "Goldfield Ghost Town, Arizona" →
+  **"Phoenix, Arizona"** (coordinates and photos untouched — display name
+  only). The owner may ask for more of these; when a place name reads as
+  overly specific/touristy, a plainer city name is probably preferred here.
+- **The state-tile cartogram's WI/IL/IN block was geographically wrong.**
+  `LEGEND.STATE_ROWS` in `js/data.js` had Illinois directly above Indiana
+  (row 2 above row 3, same column) — Illinois isn't north of Indiana, they're
+  side by side. Wisconsin *is* directly north of Illinois in reality, so the
+  fix was a 3-way rotation: WI moved into IL's old cell, IL moved down into
+  IN's old cell, IN moved up into WI's old cell. If another state pair looks
+  off on the tile grid, this file (row/col columns 3 and 4 of each entry) is
+  where to fix it — the lat/lng columns are unrelated and used only by the
+  real-map view and distance math, never touch those for a tile-position fix.
+- **The States tab now defaults to the real map, not the tile grid** —
+  `usView` in `js/app.js` defaults to `"map"` (was `"tiles"`), same for the
+  `is-on` class on the two toggle buttons in `index.html`. Per-browser choice
+  via `localStorage` still overrides this once someone actually clicks a
+  toggle; this only changes what a fresh browser sees first.
+- **World tab's country groups now start fully collapsed**, North America
+  included — `openContinents` in `js/app.js` starts as `{}` instead of
+  `{ NA: true }`. Don't reintroduce a hardcoded true entry here without being
+  asked; the owner explicitly asked to remove NA's special-cased default-open
+  state.
+
+`sw.js` bumped to `legend-v17` for this round.
+
 ## What's left
 
-- **Point `legenddzbinski.com` at the `legendarytravel` Netlify site** —
-  Domain management → add the domain, then the DNS steps at the registrar.
-  Nothing else blocks this; it's just not been asked for yet.
-- Everything else the owner asked for is shipped: the globe, journey
-  playback, badges/records, the passport and share cards, photos with
-  in-browser resizing, planned/bucket-list pins, password-gated editing with
-  public reading, and it's installable as a PWA that works offline via the
-  vector-world fallback.
+- Nothing blocking. Everything the owner has asked for is shipped: the
+  globe, journey playback, badges/records, the passport and share cards,
+  photos with in-browser resizing, planned/bucket-list pins, password-gated
+  editing with public reading, per-place pages, flight-vs-road routing, and
+  it's installable as a PWA that works offline via the vector-world
+  fallback. legenddzbinski.com is live.
+- A **favourites page** was floated by the owner as a "maybe later" idea
+  when favourites display was removed — not scoped, not requested as a
+  real feature yet.
+- **"Golden Hour" (2022)**, one Phoenix-area Memory, has unidentified
+  photos that may or may not include Legend at an unknown Arizona location —
+  see the Arizona sweep note above. Worth another look with fresh eyes
+  (or once Memory playback works again) but not worth more guessing.

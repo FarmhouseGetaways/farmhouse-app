@@ -4,7 +4,7 @@ A tracking site for everywhere Legend Dzbinski has been: pins on a world map,
 a country tracker, a fifty-state board, continents, and a scoreboard for the
 places that aren't on any continent at all.
 
-It is meant to live at **legenddzbinski.com**.
+It lives at **legenddzbinski.com** (and at legendarytravel.netlify.app).
 
 It is plain HTML, CSS and JavaScript with no build step and no framework.
 Reading it needs nothing at all — open `index.html` through any web server and
@@ -137,7 +137,11 @@ Its own Netlify site, separate from the farmhouse app in the repo root:
    password signs everyone out — usually what you want anyway.
 
 6. Deploy. Then *Domain management* → add `legenddzbinski.com` and follow
-   Netlify's DNS instructions at the registrar.
+   Netlify's DNS instructions at the registrar. **Already done** — the domain
+   is registered at DirectNic, which had a stale "Redirect url" forwarding
+   pointed at an unrelated Wix site; that forwarding had to be turned off and
+   replaced with the real A/CNAME records Netlify gives you, or the domain
+   just keeps redirecting instead of serving this site.
 
 Netlify installs `package.json` and builds the three functions in
 `netlify/functions` automatically; there is no build step for the site itself.
