@@ -399,13 +399,23 @@ select.ctl option { background: var(--ink-2); }
 
 .cgroup { margin-bottom: 26px; }
 .cgroup__head {
-  display: flex; justify-content: space-between; align-items: baseline;
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  width: 100%; font: inherit; cursor: pointer;
   font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--dim);
-  border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px;
+  background: none; border: 0; border-bottom: 1px solid var(--line);
+  padding-bottom: 8px; margin-bottom: 12px;
 }
+.cgroup__head:hover { color: var(--text); }
+.cgroup__head span:nth-child(2) { flex: 1; text-align: left; }
+.cgroup__arrow {
+  display: inline-block; transition: transform .15s ease; font-size: 15px;
+  transform: rotate(0deg);
+}
+.cgroup.is-open .cgroup__arrow { transform: rotate(90deg); }
 .cgroup__n { font-family: var(--mono); letter-spacing: 0; color: var(--go); }
 
-.cgrid { display: grid; gap: 7px; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); }
+.cgrid { display: none; gap: 7px; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); }
+.cgroup.is-open .cgrid { display: grid; }
 .country {
   display: flex; align-items: center; gap: 8px; text-align: left;
   font: inherit; font-size: 13px; color: var(--dim); cursor: pointer;

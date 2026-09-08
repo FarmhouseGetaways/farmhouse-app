@@ -146,6 +146,9 @@ window.LEGEND = window.LEGEND || {};
 
   var countryFilter = "";
   var countryOnlyVisited = false;
+  /* Every continent's country grid starts collapsed except North America —
+     home turf, and the one anyone actually opens the page to look at. */
+  var openContinents = { NA: true };
 
   function renderCountries(s) {
     var host = $("#countries");
@@ -161,10 +164,15 @@ window.LEGEND = window.LEGEND || {};
       });
       if (!list.length) return "";
       var got = list.filter(function (x) { return s.countries[x.code]; }).length;
+      /* A search or the "visited only" filter narrowing the list open is
+         the point of typing — a collapsed group hiding its own match would
+         read as a bug, not a filter. */
+      var open = !!openContinents[c.code] || !!q || countryOnlyVisited;
       return '' +
-        '<section class="cgroup">' +
-          '<h3 class="cgroup__head"><span>' + esc(c.name) + "</span>" +
-            '<span class="cgroup__n">' + got + " / " + list.length + "</span></h3>" +
+        '<section class="cgroup' + (open ? " is-open" : "") + '">' +
+          '<button type="button" class="cgroup__head" data-continent="' + c.code + '">' +
+            '<span class="cgroup__arrow">&rsaquo;</span><span>' + esc(c.name) + "</span>" +
+            '<span class="cgroup__n">' + got + " / " + list.length + "</span></button>" +
           '<div class="cgrid">' + list.map(function (x) {
             var n = s.countries[x.code] || 0;
             var wish = !n && s.plannedCountries[x.code];
@@ -1306,6 +1314,13 @@ window.LEGEND = window.LEGEND || {};
     });
     $("#country-visited").addEventListener("change", function () {
       countryOnlyVisited = this.checked;
+      renderCountries(Store.stats());
+    });
+    $("#countries").addEventListener("click", function (e) {
+      var head = e.target.closest && e.target.closest("[data-continent]");
+      if (!head) return;
+      var code = head.getAttribute("data-continent");
+      openContinents[code] = !openContinents[code];
       renderCountries(Store.stats());
     });
 
