@@ -106,7 +106,11 @@ window.LEGEND = window.LEGEND || {};
       date: String(p.date || ""),
       notes: String(p.notes || ""),
       photos: photos,
-      fav: !!p.fav
+      fav: !!p.fav,
+      /* How the hop into this place from whatever came before it happened.
+         Only "flight" means anything to the map right now — everything else
+         is assumed driven and gets a real road route. */
+      flight: !!p.flight
     };
   }
 

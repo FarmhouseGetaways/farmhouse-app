@@ -47,7 +47,8 @@ function clean(p) {
     date: /^\d{4}-\d{2}-\d{2}$/.test(String(p.date || "")) ? p.date : "",
     notes: String(p.notes || "").slice(0, 2000),
     photos,
-    fav: !!p.fav
+    fav: !!p.fav,
+    flight: !!p.flight
   };
 }
 

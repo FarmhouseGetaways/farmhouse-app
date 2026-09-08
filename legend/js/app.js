@@ -920,6 +920,7 @@ window.LEGEND = window.LEGEND || {};
     $("#f-photos").value = place && place.photos ? place.photos.join("\n") : "";
     renderFormShots();
     $("#f-fav").checked = place ? place.fav : false;
+    $("#f-flight").checked = place ? place.flight : false;
     closeSuggest();
     noteSuggest("");
 
@@ -988,7 +989,8 @@ window.LEGEND = window.LEGEND || {};
       photos: $("#f-photos").value.split("\n").map(function (u) {
         return u.trim();
       }).filter(Boolean),
-      fav: $("#f-fav").checked
+      fav: $("#f-fav").checked,
+      flight: $("#f-flight").checked
     };
     if (!data.name) { $("#f-name").focus(); return; }
 
@@ -1218,9 +1220,10 @@ window.LEGEND = window.LEGEND || {};
        outlines are missing it simply doesn't appear. */
     try {
       if (L.Globe && L.WORLD_GEO) {
-        globe = L.Globe.create($("#globe"), {
-          onSelect: function (id) { showPlace(id); }
-        });
+        /* No onSelect: the globe is a decoration to spin, not another way
+           into a place page — a stray tap while rotating it used to jump
+           straight to whatever pin was underneath, which read as a bug. */
+        globe = L.Globe.create($("#globe"));
       } else {
         $(".hero__globe").hidden = true;
       }

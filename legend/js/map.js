@@ -174,16 +174,25 @@ window.LEGEND = window.LEGEND || {};
      third party to show a route at all), then swaps it for the real driving
      route the moment OSRM answers — same two-layer glow + dash look either
      way, so the upgrade is invisible except that the line now bends with
-     the road. */
+     the road. A flight never gets that upgrade: OSRM will happily draw
+     "directions" along the coast road for a hop that was actually flown
+     (Cancún by rental car, technically, if you had three days to spare),
+     so a hop into a place marked flight:true keeps the plain arc and a
+     lighter, wider-dashed line that reads as "flew this one" at a glance. */
   function drawHop(a, b, gen) {
+    var flying = !!b.flight;
+    var color = flying ? "#e8edf7" : "#5eead4";
     var glow = window.L.polyline(arc(a, b), {
-      className: "route route--glow", weight: 6, opacity: 0.18,
-      color: "#5eead4", interactive: false
+      className: "route route--glow" + (flying ? " route--flight" : ""),
+      weight: 6, opacity: flying ? 0.12 : 0.18, color: color, interactive: false
     }).addTo(pathLayer);
     var line = window.L.polyline(arc(a, b), {
-      className: "route", weight: 1.4, opacity: 0.85,
-      color: "#5eead4", dashArray: "5 7", interactive: false
+      className: "route" + (flying ? " route--flight" : ""),
+      weight: 1.4, opacity: 0.85, color: color,
+      dashArray: flying ? "2 10" : "5 7", interactive: false
     }).addTo(pathLayer);
+
+    if (flying) return;   // an arc is the honest picture of a flight — done
 
     drivingRoute(a, b).then(function (pts) {
       if (!pts || gen !== renderGen) return;   // stale, or nothing drivable
