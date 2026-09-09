@@ -492,6 +492,9 @@ ADMIN_JS = """<script>
     document.getElementById("cal-list").innerHTML = shown.length
       ? shown.map(calCard).join("")
       : '<p class="fine">Nothing booked.</p>';
+    note("cal-note", shown.length
+      ? shown.length + " booking" + (shown.length === 1 ? "" : "s") + "."
+      : "Nothing booked.");
   }
 
   async function loadCalendar() {
@@ -508,9 +511,6 @@ ADMIN_JS = """<script>
       }
       calCache = d.bookings || [];
       paintCalendar();
-      note("cal-note", calCache.length
-        ? calCache.length + " booking" + (calCache.length === 1 ? "" : "s") + "."
-        : "Nothing booked.");
     } catch (err) {
       note("cal-note", "Could not reach Lodgify.");
     }
