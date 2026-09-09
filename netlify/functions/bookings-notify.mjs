@@ -130,5 +130,10 @@ export default async () => {
     }
   }
 
+  console.log(
+    `[bookings-notify] ${today} — checked ${bookings.length}, due ${due.length} -> ` +
+    `sent ${sent}, skipped ${skipped}, failed ${failed}`
+  );
+
   return json({ ok: true, today, checked: bookings.length, due: due.length, sent, skipped, failed });
 };
