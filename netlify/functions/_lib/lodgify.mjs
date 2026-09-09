@@ -29,6 +29,13 @@ export function configured() {
   return Boolean((process.env.LODGIFY_API_KEY || "").trim());
 }
 
+/** "Today" in Ramona, not in whatever timezone the function happens to run
+ *  in — Lodgify's dates are plain YYYY-MM-DD with no timezone of their own,
+ *  so comparing them against a UTC "today" is wrong for part of every day. */
+export function pacificToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" }).format(new Date());
+}
+
 /** First name + last name if Lodgify has them, falling back to whatever it
  *  does have. None of this is guaranteed present — an Airbnb/Vrbo booking
  *  often carries only a first name. */

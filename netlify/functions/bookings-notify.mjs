@@ -34,15 +34,9 @@
  */
 import { getStore } from "@netlify/blobs";
 import { sendToAdmins, configured as pushConfigured, json } from "./_lib/push.mjs";
-import { configured as lodgifyConfigured, fetchBookings } from "./_lib/lodgify.mjs";
+import { configured as lodgifyConfigured, fetchBookings, pacificToday } from "./_lib/lodgify.mjs";
 
 const SENT = () => getStore("booking-notify-sent");
-
-function pacificToday() {
-  // en-CA formats as YYYY-MM-DD, which is the same shape Lodgify's dates are
-  // already in — no reparsing needed to compare them.
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" }).format(new Date());
-}
 
 function toUTCms(yyyyMmDd) {
   const [y, m, d] = yyyyMmDd.split("-").map(Number);
