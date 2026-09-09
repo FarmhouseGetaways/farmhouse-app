@@ -41,6 +41,7 @@ export default async (req) => {
       alertKey: Boolean(process.env.ALERT_KEY),
       netlify: Boolean(process.env.NETLIFY_TOKEN),
       ntfy: Boolean(process.env.NTFY_TOPIC),
+      lodgify: Boolean(process.env.LODGIFY_API_KEY),
     },
   });
 };

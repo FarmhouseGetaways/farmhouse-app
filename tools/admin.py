@@ -34,6 +34,7 @@ ADMIN_BODY = f"""<div class="wrap sec" id="gate">
 
   <nav class="adm-tabs" id="adm-tabs">
     <button class="adm-tab is-on" data-pane="inbox">Inbox <span class="pill" id="pending">0</span></button>
+    <button class="adm-tab" data-pane="calendar">Calendar</button>
     <button class="adm-tab" data-pane="push">Push</button>
     <button class="adm-tab" data-pane="checkout">Checkout</button>
     <button class="adm-tab" data-pane="status">Status</button>
@@ -61,6 +62,25 @@ ADMIN_BODY = f"""<div class="wrap sec" id="gate">
         wrote. Opens in Numbers, Excel or Sheets, and is what to import from if
         the list ever moves into EmailOctopus.</p>
       <p class="fine" id="export-note"></p>
+    </section>
+
+    <!-- ---------------------------------------------------------------- -->
+    <section class="pane" id="pane-calendar">
+      <div class="sec">
+        <p class="eyebrow">Farmhouse Getaways</p>
+        <h1 class="big">Bookings</h1>
+        <p class="fine">Read straight from Lodgify &mdash; check-in, check-out,
+          which house and how many people, whenever it changes there. Nothing
+          here is entered by hand and nothing here can get out of sync with the
+          real calendar.</p>
+        <nav class="adm-filters" id="cal-filters">
+          <button class="adm-filter is-on" data-prop="all">All</button>
+          <button class="adm-filter" data-prop="RBR">Red Barn Ranch</button>
+          <button class="adm-filter" data-prop="MR">Mountain Retreat</button>
+        </nav>
+        <p class="fine" id="cal-note">Loading&hellip;</p>
+        <div id="cal-list"></div>
+      </div>
     </section>
 
     <!-- ---------------------------------------------------------------- -->
@@ -294,7 +314,8 @@ ADMIN_JS = """<script>
       checkRow("Admin password", c.adminPassword, "ADMIN_PASSWORD is not set") +
       checkRow("Netlify token", c.netlify, "NETLIFY_TOKEN \\u2014 needed for the inbox") +
       checkRow("Alert key", c.alertKey, "ALERT_KEY \\u2014 lets the three websites send you form submissions") +
-      checkRow("ntfy topic", c.ntfy, "Optional \\u2014 push straight to your own phone");
+      checkRow("ntfy topic", c.ntfy, "Optional \\u2014 push straight to your own phone") +
+      checkRow("Lodgify", c.lodgify, "LODGIFY_API_KEY \\u2014 needed for the Calendar tab and its notifications");
     gate.hidden = true; panel.hidden = false;
     return true;
   }
@@ -440,6 +461,70 @@ ADMIN_JS = """<script>
     b.classList.add("is-on");
     show = b.dataset.show;
     paintInbox();
+  });
+
+  /* ---- calendar: bookings read live from Lodgify ---- */
+  var calCache = [];
+  var calProp = "all";
+
+  function fmtDate(iso) {
+    if (!iso) return "\\u2014";
+    var d = new Date(iso + "T00:00:00");
+    if (isNaN(d)) return iso;
+    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  }
+
+  function calCard(b) {
+    var rows = '<dl>' +
+      '<dt>Check-in</dt><dd>' + esc(fmtDate(b.checkin)) + '</dd>' +
+      '<dt>Check-out</dt><dd>' + esc(fmtDate(b.checkout)) + '</dd>' +
+      (b.guestName ? '<dt>Guest</dt><dd>' + esc(b.guestName) + '</dd>' : '') +
+      (b.partySize != null ? '<dt>Party size</dt><dd>' + esc(b.partySize) + '</dd>' : '') +
+      '</dl>';
+    return '<div class="sub">' +
+      '<div class="sub-top"><b>' + esc(b.propertyName) + '</b>' +
+      '<span class="sub-where">' + esc(b.property) + '</span></div>' +
+      rows + '</div>';
+  }
+
+  function paintCalendar() {
+    var shown = calCache.filter(function (b) { return calProp === "all" || b.property === calProp; });
+    document.getElementById("cal-list").innerHTML = shown.length
+      ? shown.map(calCard).join("")
+      : '<p class="fine">Nothing booked.</p>';
+  }
+
+  async function loadCalendar() {
+    note("cal-note", "Loading\\u2026");
+    try {
+      var res = await api("bookings");
+      var d = await res.json();
+      if (!d.ok) {
+        note("cal-note", /LODGIFY_API_KEY/.test(d.error || "")
+          ? "Add LODGIFY_API_KEY in Netlify to switch the calendar on."
+          : "Could not load: " + (d.error || res.status));
+        document.getElementById("cal-list").innerHTML = "";
+        return;
+      }
+      calCache = d.bookings || [];
+      paintCalendar();
+      note("cal-note", calCache.length
+        ? calCache.length + " booking" + (calCache.length === 1 ? "" : "s") + "."
+        : "Nothing booked.");
+    } catch (err) {
+      note("cal-note", "Could not reach Lodgify.");
+    }
+  }
+
+  document.getElementById("cal-filters").addEventListener("click", function (e) {
+    var b = e.target.closest(".adm-filter");
+    if (!b) return;
+    [].forEach.call(document.querySelectorAll("#cal-filters .adm-filter"), function (t) {
+      t.classList.remove("is-on");
+    });
+    b.classList.add("is-on");
+    calProp = b.dataset.prop;
+    paintCalendar();
   });
 
   /* ---- every contact, as a spreadsheet ----
@@ -720,11 +805,22 @@ ADMIN_JS = """<script>
 
   document.getElementById("co-date").addEventListener("change", loadCheckout);
 
+  /* ---- open a tab named in the URL, e.g. a push notification landing on
+     admin.html#calendar. Decorative until now — see bookings-notify.mjs and
+     push-alert.mjs, both of which point here. */
+  function openHashTab() {
+    var pane = { calendar: "calendar", submissions: "inbox" }[(location.hash || "").slice(1)];
+    var b = pane && document.querySelector('.adm-tab[data-pane="' + pane + '"]');
+    if (b) b.click();
+  }
+
   /* ---- sign in / out ---- */
   async function boot() {
     if (!(await loadStats())) return false;
     loadInbox();
+    loadCalendar();
     loadCheckout();
+    openHashTab();
     return true;
   }
   document.getElementById("signin").addEventListener("click", async function () {

@@ -117,6 +117,40 @@ precaches. It is computed from the files on disk at import time, before the
 build regenerates them, so a change to `APP_JS` lands one build behind
 locally and corrects itself on Netlify. Worth tidying.
 
+## Calendar tab — added 9 Sep 2026
+
+A fifth admin tab, **Calendar**, lists every confirmed Lodgify booking for
+both properties — check-in, check-out, which house, party size when Lodgify
+has it — plus a daily push at three points before check-in and two before
+check-out.
+
+- **Lodgify is the only place this data lives.** `netlify/functions/_lib/lodgify.mjs`
+  reads Lodgify's v1 `/v1/reservation` list endpoint (`X-ApiKey` header, key
+  in `LODGIFY_API_KEY`) live on every load — nothing is copied into a blob,
+  so there is no second calendar that can drift from the real one. `PROPERTIES`
+  in that file hard-codes the two Lodgify property ids (813711 Red Barn Ranch,
+  813713 Mountain Retreat) from the booking-box embeds on
+  farmhousegetaways.com — Lodgify has no endpoint this app could use to look
+  those up itself.
+- **`netlify/functions/bookings.mjs`** is the admin-gated read the Calendar
+  tab calls. **`netlify/functions/bookings-notify.mjs`** is a scheduled
+  function (`netlify.toml`, daily at 15:00 UTC) that pushes through
+  `sendToAdmins` — never `sendToAll`, a guest's arrival is not news for a
+  stranger's phone — for check-in 3 days out, 1 day out and the day of, and
+  check-out 1 day out and the day of.
+- **Each booking gets at most one push per milestone, ever**, tracked in a
+  `booking-notify-sent` blob keyed `<bookingId>:<milestone>`. The milestone a
+  booking maps to is computed fresh from how many days away the date
+  currently is, so a missed run does not queue up three notifications the
+  next time it runs — whatever milestone a gap skipped over is simply never
+  computed again once the days-away number has moved past it.
+- **"Today" is computed in `America/Los_Angeles`**, not the function's own
+  UTC clock — a fixed offset would be wrong twice a year at the DST switch,
+  and Lodgify's dates are plain `YYYY-MM-DD` with no timezone of their own.
+- **The tab, its markup and its JS all live in `tools/admin.py`** (`pane-calendar`,
+  `loadCalendar()`/`calCard()`/`paintCalendar()` in `ADMIN_JS`), same
+  generated-output rule as everything else here.
+
 ## Checkout activity tab — added 2 Sep 2026
 
 A fourth admin tab, **Checkout**, shows the Mini Barn Market self-checkout
