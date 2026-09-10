@@ -41,74 +41,96 @@ fetched by JavaScript is invisible to a mirror.
 `js/app.js`, `sw.js` and the manifest from `tools/build.py`. Hand edits to
 generated files survive exactly until the next deploy.
 
-## Form alerts
+## Form alerts now go to farmhouse-admin, not this app
 
-Every form on every site pushes to the owners' phones through the app:
+Every form on every site pushes to the owners' phones:
 
-    submitted -> Netlify stores it -> submission-created.mjs -> the app's
-    push-alert -> sendToAdmins -> enrolled phones only
+    submitted -> Netlify stores it -> submission-created.mjs -> POSTs to
+    ALERT_WEBHOOK -> farmhouse-admin's push-alert -> sendAll -> owner phones
 
-Never `sendToAll`: that reaches every guest who installed the app, and an
-enquirer's name does not belong on a stranger's lock screen. Set
-`ALERT_WEBHOOK_KEY` (the app's ADMIN_PASSWORD) on each site. Email
-notifications are configured only in the Netlify UI — Forms → Settings and
-usage — and live in no repository.
+`ALERT_WEBHOOK`/`ALERT_WEBHOOK_KEY` on `farmhousegetaways`, `minibarnmarket`
+and `farmstandtv` were repointed at `https://farmhouse-admin.netlify.app/.netlify/functions/push-alert`
+on 10 Sep 2026 (previously they had no `ALERT_WEBHOOK` set at all and fell
+through to `_lib/alerts.mjs`'s hardcoded default, which pointed here —
+confirmed live and fixed the same day this was written up, after an earlier
+pass at this split had documented the repointing as done without actually
+doing it). **This app's own `push-alert.mjs` is gone** — it would receive
+nothing now that the three sites point elsewhere, so keeping it would just
+be a second, silently-dead copy. Email notifications are configured only in
+the Netlify UI — Forms → Settings and usage — and live in no repository.
 
 ## READ THIS FIRST: almost everything here is generated
 
 `netlify.toml` runs `python3 tools/build.py` on every deploy. It writes
-**all six `.html` files, `js/app.js`, `sw.js` and
+**all seven `.html` files, `js/app.js`, `sw.js` and
 `manifest.webmanifest`**. Editing any of them directly is thrown away by the
 next build — and the failure is confusing, because functions committed
 alongside deploy fine, so half the change appears to work.
 
-Sources: `tools/build.py`, `tools/install_page.py`. Netlify functions under
-`netlify/functions/` are NOT generated — edit those directly.
+Sources: `tools/build.py`, `tools/admin.py`, `tools/install_page.py`.
+Netlify functions under `netlify/functions/` are NOT generated — edit those
+directly.
 
-## The admin screen moved out — 9/10 Sep 2026
+## Most of the admin screen moved out — a small corner stayed, 9-10 Sep 2026
 
-Everything that used to live at `/admin` (Inbox, Calendar, Push controls,
-Checkout) is now a **separate app**: `FarmhouseGetaways/farmhouse-admin`,
-live at farmhouse-admin.netlify.app, Google-SSO gated for Cory & Carissa
-only. This site grew that screen organically until it was the actual
-back-office for the whole business while still being installed by guests as
-"Mini Barn" — see that repo's own CLAUDE.md for the full reasoning and shape
-of the new app.
+The cross-site inbox, the Lodgify calendar, checkout activity, and the
+owner-alert receiver (`push-alert.mjs`) are now a **separate app**:
+`FarmhouseGetaways/farmhouse-admin`, live at farmhouse-admin.netlify.app,
+Google-SSO gated for Cory & Carissa only. This site grew that screen
+organically until it was the actual back-office for the whole business
+while still being installed by guests as "Mini Barn" — see that repo's own
+CLAUDE.md for the full reasoning.
 
-**`/admin` and `/admin.html` here are now just redirects** (`netlify.toml`)
-to the new app, so the `.bar-admin` link already on every page keeps working
-without a guest ever landing on a stale password screen.
+**`/admin` here is still a real page, on purpose — not a redirect.** The
+first cut of this split made it one, but Cory's reaction on seeing the MBM
+guest broadcast sitting inside the *other* app (titled "Farmhouse Getaways,
+Cory & Carissa only") was immediate: *"MBM app needs admin too, just not
+the same stuff. Put it there."* So `admin.html` is back, much smaller than
+before — one card, "Send one now" to every guest who installed this app —
+generated from `tools/admin.py` same as everything else, Google-SSO gated
+the same way as farmhouse-admin (same three accounts, same Authorization
+Code redirect flow — see farmhouse-admin's CLAUDE.md for why it's a plain
+redirect and not Google's rendered button, which doesn't work in Safari).
 
-**What actually moved vs. what stayed, and why it isn't a clean 1:1 split:**
-Netlify Blobs are scoped per site. `bookings.mjs`/`_lib/lodgify.mjs`
-(Lodgify has no local state) and `checkout-activity.mjs` (a pure
-server-to-server proxy, no local state either) moved to farmhouse-admin
-outright. But `admin-submissions.mjs` and `admin-approve.mjs` **stayed
-here, unchanged** — they read and write the `stands-overlay` and
+**Why it isn't a clean 1:1 split — Netlify Blobs are scoped per site.**
+`bookings.mjs`/`_lib/lodgify.mjs` and `checkout-activity.mjs` (both stateless
+— Lodgify and a checkout-site proxy respectively) moved to farmhouse-admin
+outright. But `admin-submissions.mjs` and `admin-approve.mjs` **stayed here,
+unchanged** — they read and write the `stands-overlay` and
 `submissions-handled` Blobs, which is also what this site's own public
 `stands.mjs` reads. Moving them would have meant approving a farm stand in
-the new app silently wrote to a store the public map never looks at. The
-new app's own `admin-submissions.mjs`/`admin-approve.mjs` are thin proxies
-that call these two, server-to-server, holding `MBM_BROADCAST_KEY` — the
-same value as this site's own `ADMIN_PASSWORD`. **`ADMIN_PASSWORD` stays
-set here for exactly that reason**, even with no login screen left to use
-it: `secretOk()`/`x-admin-key` on these two functions never changed.
+the other app silently wrote to a store the public map never looks at.
+farmhouse-admin's own versions of those two are thin proxies that call
+these, server-to-server, holding `GUEST_APP_KEY` — the same value as this
+site's own `ADMIN_PASSWORD`. **`ADMIN_PASSWORD` stays set here for exactly
+that reason**, even though nothing in this app's own UI reads it anymore:
+`secretOk()`/`x-admin-key` on those two functions never changed.
 
-**"Send one now" (the guest broadcast) works the same way in reverse.**
-`push-send.mjs` stays here — it's the only thing that can reach this site's
-own `push-subs` Blobs store — but the button for it now lives on the new
-app's Push tab, calling this site's `push-send.mjs` server-to-server with
-the same `MBM_BROADCAST_KEY`/`ADMIN_PASSWORD` value.
+`push-send.mjs` (the guest broadcast) is called **same-origin now**, from
+this app's own `admin.html`, gated by this app's own session cookie
+(`_lib/session.mjs`, `currentEmail(req)`) — not the old `ADMIN_PASSWORD`
+header. An earlier pass had this called cross-site from farmhouse-admin
+instead; that's gone along with the redirect, now that the broadcast has
+its own home here again.
+
+**Two small pieces of dead code, left in place on purpose rather than
+risk breaking the shared `_lib/push.mjs` file for a cleanup with no
+functional benefit:** `sendToAdmins()` in `_lib/push.mjs` and the `admin`
+flag branch in `push-subscribe.mjs` were the guest-vs-owner push split this
+app used before form alerts moved to farmhouse-admin's own, separate
+subscriber pool. Nothing calls either any more. Harmless; safe to remove
+next time either file is touched for something else.
 
 ## Push
 
-- `sendToAll` — every installed phone. Stories, peaches, guest news.
-- `sendToAdmins` — owner devices, for the three websites' form-submission
-  alerts (`push-alert.mjs`, still received here — the new admin app has its
-  own separate, simpler push stack for everything else, see its CLAUDE.md).
+`sendToAll` — every installed phone. Stories, peaches, guest news, and now
+the "Send one now" broadcast on this app's own `admin.html` too. There is no
+owner-only audience on this side any more — that's entirely farmhouse-admin's
+own, separate subscriber pool now (see that repo's CLAUDE.md).
 
-Each form alert carries a unique tag: the service worker replaces notifications
-sharing a tag, which is right for the Story watcher and wrong for submissions.
+Story pushes carry a shared tag so the service worker replaces rather than
+stacks them; the broadcast uses its own tag (`"manual"`) so two sends never
+collide.
 
 ## The inbox — data lives here, screen lives in farmhouse-admin
 

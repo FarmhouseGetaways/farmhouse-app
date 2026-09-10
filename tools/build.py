@@ -29,6 +29,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from install_page import INSTALL_BODY, INSTALL_CSS, INSTALL_JS
+from admin import ADMIN_BODY, ADMIN_CSS, ADMIN_JS
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -960,6 +961,21 @@ def page_install():
             + '<script src="/js/app.js?v=' + ASSET_HASH + '"></script>\n</body>\n</html>\n')
 
 
+def page_admin():
+    """
+    No tab bar. This app's own small admin corner — guest broadcast only,
+    everything else moved to farmhouse-admin (see CLAUDE.md). Google
+    sign-in, not a password.
+    """
+    html = (head("Admin", "/admin", "var(--fstv)", ADMIN_CSS)
+            + bar("Admin", "Cory &amp; Carissa only")
+            + ADMIN_BODY
+            + "</main>\n" + ADMIN_JS
+            + '\n<script src="/js/app.js?v=' + ASSET_HASH + '"></script>\n</body>\n</html>\n')
+    return html.replace("<title>Admin</title>",
+                        '<title>Admin</title>\n<meta name="robots" content="noindex, nofollow">')
+
+
 def main():
     pages = {
         "index.html": page_today(),
@@ -967,6 +983,7 @@ def main():
         "stay.html": page_stay(),
         "watch.html": page_watch(),
         "more.html": page_more(),
+        "admin.html": page_admin(),
         "install.html": page_install(),
     }
     for name, html in pages.items():

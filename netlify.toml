@@ -80,17 +80,13 @@
   schedule = "0 9 * * 1"
 
 
-# The admin screen moved out entirely — see FarmhouseGetaways/farmhouse-admin
-# (farmhouse-admin.netlify.app), a separate Google-SSO app for Cory & Carissa
-# only. /admin here now just hands off to it rather than serving anything of
-# its own, so the "Admin" link already on every page (bar-admin in
-# tools/build.py) keeps working without guests ever seeing a stale password
-# screen. 302, not 301: the destination may still move while this is settling.
+# Most of what used to be here moved to FarmhouseGetaways/farmhouse-admin
+# (farmhouse-admin.netlify.app) — the cross-site inbox, the Lodgify
+# calendar, checkout activity. This app kept a small admin corner of its
+# own for the guest broadcast only (Cory: "MBM app needs admin too, just
+# not the same stuff"), Google-SSO gated the same way. /admin resolves to
+# that page, not a redirect to the other app.
 [[redirects]]
   from = "/admin"
-  to = "https://farmhouse-admin.netlify.app/"
-  status = 302
-[[redirects]]
-  from = "/admin.html"
-  to = "https://farmhouse-admin.netlify.app/"
-  status = 302
+  to = "/admin.html"
+  status = 200
