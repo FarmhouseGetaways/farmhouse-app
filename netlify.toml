@@ -79,14 +79,8 @@
 [functions."instagram-refresh"]
   schedule = "0 9 * * 1"
 
-# One admin, one login, one URL. Everything about admin — the cross-site
-# inbox, the Lodgify calendar, checkout activity, the guest broadcast, AND
-# this app's own subscriber count / test push / is-it-switched-on — lives
-# on FarmhouseGetaways/farmhouse-admin. This is a plain external redirect,
-# not a page of its own: no second Google sign-in anywhere on this app. See
-# CLAUDE.md before ever building a local /admin page here again.
-[[redirects]]
-  from = "/admin"
-  to = "https://farmhouse-admin.netlify.app/"
-  status = 302
-  force = true
+# No /admin here at all — not a page, not a redirect. Cory: "so now we have
+# two that sign into the same place? Remove /admin! NOT NEEDED!" — a
+# redirect still reads as a second entry point. Cory & Carissa go to
+# farmhouse-admin.netlify.app directly. See CLAUDE.md before ever adding
+# anything under /admin on this app again.

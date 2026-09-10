@@ -167,7 +167,7 @@ def head(title, path, accent, extra_head=""):
 def bar(title, sub, action=""):
     return f"""<header class="bar">
   <div><p class="bar-title">{title}</p><p class="bar-sub">{sub}</p></div>
-  <div class="bar-right">{action}<a class="bar-admin" href="/admin">Admin</a></div>
+  <div class="bar-right">{action}</div>
 </header>
 <main id="main">
 """

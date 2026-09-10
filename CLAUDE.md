@@ -72,18 +72,18 @@ Sources: `tools/build.py`, `tools/install_page.py`. Netlify functions under
 
 ## There is ONE admin, and it is not here — settled 10 Sep 2026, five tries in
 
-`/admin` on this app is a **plain external redirect to
-farmhouse-admin.netlify.app** (`netlify.toml`, `force = true`) — no page,
-no login, nothing rendered on this origin. `FarmhouseGetaways/farmhouse-admin`
-is the only admin surface for the whole business, Google-SSO gated for
-Cory & Carissa only, including things that are specifically about THIS
-app's own operation (guest subscriber count, a test push, an
-is-it-switched-on read of this app's env vars) — see that repo's own
-CLAUDE.md and its Status tab.
+**There is no `/admin` on this app at all — not a page, not a redirect,
+not a header link.** `FarmhouseGetaways/farmhouse-admin` is the only admin
+surface for the whole business, Google-SSO gated for Cory & Carissa only,
+including things that are specifically about THIS app's own operation
+(guest subscriber count, a test push, an is-it-switched-on read of this
+app's env vars) — see that repo's own CLAUDE.md and its Status tab. Cory &
+Carissa go to farmhouse-admin.netlify.app directly; nothing here points at
+it any more, not even a link.
 
-**Do not build a page, a login flow, or a session cookie under `/admin`
-on this app again for any reason.** It took five tries in one day to learn
-this:
+**Do not add anything under `/admin` on this app again for any reason —
+not a page, not a redirect, not a link.** It took six tries in one day to
+learn this:
 1. `/admin` redirected to farmhouse-admin with the guest broadcast on ITS
    Push tab. Cory, seeing an MBM-branded button on a screen titled
    "Farmhouse Getaways, Cory & Carissa only": *"Under push what the hell is
@@ -102,11 +102,16 @@ this:
    Misread as "build a second, narrower admin page here" — rebuilt the
    whole Google-SSO stack a second time, scoped to app-level settings only.
 5. Cory: *"I told you, /admin should be under the other link. That's just
-   an admin fucking page... so why would we have another one???"* The
-   actual ask in step 4 was: keep those app-level settings, but surface
-   them **inside farmhouse-admin**, reached through its one login — not a
-   second login here just because the settings happen to be about this
-   app specifically. **This is the one that stuck.**
+   an admin fucking page... so why would we have another one???"* Read (a
+   bit closer this time) as: keep the app-level settings, but surface them
+   **inside farmhouse-admin**, reached through its one login. Made `/admin`
+   here a plain 302 redirect to farmhouse-admin instead of a page — but
+   kept the "Admin" link in this app's own header, pointing at `/admin`.
+6. Cory: *"so now we have two that sign into the same place? WTF?!! Remove
+   /admin! NOT NEEDED!"* A redirect still reads as a second entry point
+   when there's a visible link inviting you to use it. **The header link
+   is gone, the redirect is gone. `/admin` is a 404 here now, same as any
+   other path that was never a route. This is the one that stuck.**
 
 **What this means for `push-test`/`admin-stats`/subscriber visibility**:
 they're real functions, still here (this app owns the Blobs and the VAPID
