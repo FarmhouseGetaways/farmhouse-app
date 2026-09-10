@@ -214,6 +214,11 @@ ADMIN_CSS = """<style>
   }
   .sub dl + dl { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--line); }
   .sub .btn { padding: .7rem 1.1rem; font-size: .64rem; }
+  /* Calendar cards only — RBR/MR at a glance without reading either badge. */
+  .sub.bk-rbr { border-left: 3px solid var(--mbm-red); }
+  .sub.bk-mr { border-left: 3px solid var(--fstv); }
+  .sub-where.bk-rbr { background: var(--mbm-red); color: var(--night); }
+  .sub-where.bk-mr { background: var(--fstv); color: var(--night); }
   .adm-filters { display: flex; gap: .4rem; margin: 0 0 .8rem; flex-wrap: wrap; }
   .adm-filter {
     background: none; border: 1px solid var(--line); color: var(--mute-2);
@@ -471,19 +476,24 @@ ADMIN_JS = """<script>
     if (!iso) return "\\u2014";
     var d = new Date(iso + "T00:00:00");
     if (isNaN(d)) return iso;
-    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    return d.toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" });
   }
 
   function calCard(b) {
+    // Colour is the fast read here — a wall of otherwise-identical dark
+    // cards is hard to scan by property at a glance. bk-rbr/bk-mr are
+    // calendar-only modifiers on the shared .sub/.sub-where classes, so
+    // nothing here touches how those look on the Inbox tab.
+    var propClass = b.property === "RBR" ? "bk-rbr" : (b.property === "MR" ? "bk-mr" : "");
     var rows = '<dl>' +
       '<dt>Check-in</dt><dd>' + esc(fmtDate(b.checkin)) + '</dd>' +
       '<dt>Check-out</dt><dd>' + esc(fmtDate(b.checkout)) + '</dd>' +
       (b.guestName ? '<dt>Guest</dt><dd>' + esc(b.guestName) + '</dd>' : '') +
       (b.partySize != null ? '<dt>Party size</dt><dd>' + esc(b.partySize) + '</dd>' : '') +
       '</dl>';
-    return '<div class="sub">' +
+    return '<div class="sub' + (propClass ? " " + propClass : "") + '">' +
       '<div class="sub-top"><b>' + esc(b.propertyName) + '</b>' +
-      '<span class="sub-where">' + esc(b.property) + '</span></div>' +
+      '<span class="sub-where' + (propClass ? " " + propClass : "") + '">' + esc(b.property) + '</span></div>' +
       rows + '</div>';
   }
 
