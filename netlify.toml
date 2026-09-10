@@ -79,14 +79,18 @@
 [functions."instagram-refresh"]
   schedule = "0 9 * * 1"
 
-# Checks Lodgify once a day for check-ins/check-outs due a push (3 days out,
-# 1 day out, and the day of). 15:00 UTC is a mid-morning hour in Ramona in
-# either offset (8am PDT / 7am PST) — the function itself derives "today" from
-# America/Los_Angeles rather than depending on this being exact.
-[functions."bookings-notify"]
-  schedule = "0 15 * * *"
 
+# The admin screen moved out entirely — see FarmhouseGetaways/farmhouse-admin
+# (farmhouse-admin.netlify.app), a separate Google-SSO app for Cory & Carissa
+# only. /admin here now just hands off to it rather than serving anything of
+# its own, so the "Admin" link already on every page (bar-admin in
+# tools/build.py) keeps working without guests ever seeing a stale password
+# screen. 302, not 301: the destination may still move while this is settling.
 [[redirects]]
   from = "/admin"
-  to = "/admin.html"
-  status = 200
+  to = "https://farmhouse-admin.netlify.app/"
+  status = 302
+[[redirects]]
+  from = "/admin.html"
+  to = "https://farmhouse-admin.netlify.app/"
+  status = 302

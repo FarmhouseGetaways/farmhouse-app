@@ -57,130 +57,77 @@ usage — and live in no repository.
 ## READ THIS FIRST: almost everything here is generated
 
 `netlify.toml` runs `python3 tools/build.py` on every deploy. It writes
-**all seven `.html` files, `js/app.js`, `sw.js` and
+**all six `.html` files, `js/app.js`, `sw.js` and
 `manifest.webmanifest`**. Editing any of them directly is thrown away by the
 next build — and the failure is confusing, because functions committed
 alongside deploy fine, so half the change appears to work.
 
-Sources: `tools/build.py`, `tools/admin.py`, `tools/install_page.py`.
-Netlify functions under `netlify/functions/` are NOT generated — edit those
-directly.
+Sources: `tools/build.py`, `tools/install_page.py`. Netlify functions under
+`netlify/functions/` are NOT generated — edit those directly.
+
+## The admin screen moved out — 9/10 Sep 2026
+
+Everything that used to live at `/admin` (Inbox, Calendar, Push controls,
+Checkout) is now a **separate app**: `FarmhouseGetaways/farmhouse-admin`,
+live at farmhouse-admin.netlify.app, Google-SSO gated for Cory & Carissa
+only. This site grew that screen organically until it was the actual
+back-office for the whole business while still being installed by guests as
+"Mini Barn" — see that repo's own CLAUDE.md for the full reasoning and shape
+of the new app.
+
+**`/admin` and `/admin.html` here are now just redirects** (`netlify.toml`)
+to the new app, so the `.bar-admin` link already on every page keeps working
+without a guest ever landing on a stale password screen.
+
+**What actually moved vs. what stayed, and why it isn't a clean 1:1 split:**
+Netlify Blobs are scoped per site. `bookings.mjs`/`_lib/lodgify.mjs`
+(Lodgify has no local state) and `checkout-activity.mjs` (a pure
+server-to-server proxy, no local state either) moved to farmhouse-admin
+outright. But `admin-submissions.mjs` and `admin-approve.mjs` **stayed
+here, unchanged** — they read and write the `stands-overlay` and
+`submissions-handled` Blobs, which is also what this site's own public
+`stands.mjs` reads. Moving them would have meant approving a farm stand in
+the new app silently wrote to a store the public map never looks at. The
+new app's own `admin-submissions.mjs`/`admin-approve.mjs` are thin proxies
+that call these two, server-to-server, holding `MBM_BROADCAST_KEY` — the
+same value as this site's own `ADMIN_PASSWORD`. **`ADMIN_PASSWORD` stays
+set here for exactly that reason**, even with no login screen left to use
+it: `secretOk()`/`x-admin-key` on these two functions never changed.
+
+**"Send one now" (the guest broadcast) works the same way in reverse.**
+`push-send.mjs` stays here — it's the only thing that can reach this site's
+own `push-subs` Blobs store — but the button for it now lives on the new
+app's Push tab, calling this site's `push-send.mjs` server-to-server with
+the same `MBM_BROADCAST_KEY`/`ADMIN_PASSWORD` value.
 
 ## Push
 
 - `sendToAll` — every installed phone. Stories, peaches, guest news.
-- `sendToAdmins` — owner devices only. Form submissions from the three sites.
-
-A device becomes an owner device via **Send alerts to this phone** on the admin
-screen, which subscribes with the admin password attached. The flag is set from
-the verified header, never from the request body, so nobody can enrol
-themselves. Re-subscribing on launch preserves it.
+- `sendToAdmins` — owner devices, for the three websites' form-submission
+  alerts (`push-alert.mjs`, still received here — the new admin app has its
+  own separate, simpler push stack for everything else, see its CLAUDE.md).
 
 Each form alert carries a unique tag: the service worker replaces notifications
 sharing a tag, which is right for the Story watcher and wrong for submissions.
 
-**The admin screen has a visible link** — small, top right of the bar on every
-screen, `.bar-admin` in `build.py`. It was hidden behind a 750ms press-and-hold
-on the title until 21 Aug 2026; the owner asked for it plainly instead, and
-hiding it was never security anyway — `/admin` asks for the password regardless,
-which is the part that matters.
-
-## The inbox
+## The inbox — data lives here, screen lives in farmhouse-admin
 
 `admin-submissions` reads every form submission across all four Netlify sites
 and returns them in one list. Nothing is stored locally: **Dismiss writes a
 "handled" mark to a blob, it never deletes**, so a dismissed submission is still
-in Netlify Forms and still in this list. That was not obvious when everything
-sat in one list and a dealt-with card merely went grey, so the inbox has
-**Waiting / Dealt with / All** and opens on Waiting.
+in Netlify Forms and still in this list.
 
-Contact details are tap targets, not text: `value()` turns an email into a
-`mailto:` with the subject and greeting already filled in, a phone into `tel:`,
-a website into a link. **A web page cannot make mail send AS a chosen address** —
-`mailto:` opens whatever mail app the phone has, signed in as whatever account
-that app uses. If a reply must go out as minibarnmarket@gmail.com, that account
-has to be the mail app's default or picked from its From list.
+Contact details are tap targets, not text: `value()` (in the new app's UI now)
+turns an email into a `mailto:` with the subject and greeting already filled
+in, a phone into `tel:`, a website into a link. **A web page cannot make mail
+send AS a chosen address** — `mailto:` opens whatever mail app the phone has,
+signed in as whatever account that app uses.
 
 The farm stand card shows the owner's name, email and phone *in addition to*
 `preview`. `preview` deliberately withholds them because it is a picture of what
 goes on the public map — but they are the whole point of the inbox.
 
-**Download every contact (CSV)** builds the file in the browser from the list
-already on screen: no second endpoint to keep in step, nothing new to
-authorise. Columns are the union of every field any submission carries, so a
-form that gains a field later exports it with no edit here. It writes a UTF-8
-BOM, without which Excel mangles any accented name. This is what to import from
-if the list ever moves into EmailOctopus.
-
 `ASSET_HASH` versions the CSS and both scripts and is what the service worker
 precaches. It is computed from the files on disk at import time, before the
 build regenerates them, so a change to `APP_JS` lands one build behind
 locally and corrects itself on Netlify. Worth tidying.
-
-## Calendar tab — added 9 Sep 2026
-
-A fifth admin tab, **Calendar**, lists every confirmed Lodgify booking for
-both properties — check-in, check-out, which house, party size when Lodgify
-has it — plus a daily push at three points before check-in and two before
-check-out.
-
-- **Lodgify is the only place this data lives.** `netlify/functions/_lib/lodgify.mjs`
-  reads Lodgify's v1 `/v1/reservation` list endpoint (`X-ApiKey` header, key
-  in `LODGIFY_API_KEY`) live on every load — nothing is copied into a blob,
-  so there is no second calendar that can drift from the real one. `PROPERTIES`
-  in that file hard-codes the two Lodgify property ids (813711 Red Barn Ranch,
-  813713 Mountain Retreat) from the booking-box embeds on
-  farmhousegetaways.com — Lodgify has no endpoint this app could use to look
-  those up itself.
-- **`netlify/functions/bookings.mjs`** is the admin-gated read the Calendar
-  tab calls. **`netlify/functions/bookings-notify.mjs`** is a scheduled
-  function (`netlify.toml`, daily at 15:00 UTC) that pushes through
-  `sendToAdmins` — never `sendToAll`, a guest's arrival is not news for a
-  stranger's phone — for check-in 3 days out, 1 day out and the day of, and
-  check-out 1 day out and the day of.
-- **Each booking gets at most one push per milestone, ever**, tracked in a
-  `booking-notify-sent` blob keyed `<bookingId>:<milestone>`. The milestone a
-  booking maps to is computed fresh from how many days away the date
-  currently is, so a missed run does not queue up three notifications the
-  next time it runs — whatever milestone a gap skipped over is simply never
-  computed again once the days-away number has moved past it.
-- **"Today" is computed in `America/Los_Angeles`**, not the function's own
-  UTC clock — a fixed offset would be wrong twice a year at the DST switch,
-  and Lodgify's dates are plain `YYYY-MM-DD` with no timezone of their own.
-- **The tab, its markup and its JS all live in `tools/admin.py`** (`pane-calendar`,
-  `loadCalendar()`/`calCard()`/`paintCalendar()` in `ADMIN_JS`), same
-  generated-output rule as everything else here.
-
-## Checkout activity tab — added 2 Sep 2026
-
-A fourth admin tab, **Checkout**, shows the Mini Barn Market self-checkout
-kiosk's activity: revenue, scans vs. missed items, confirm/reject counts,
-charge success/failure, and a list of what got missed with the photo kept
-for each (see `FarmhouseGetaways/mbm-checkout`'s own CLAUDE.md for the
-kiosk side of this — it's a fully separate site and repo, on purpose).
-
-- **`netlify/functions/checkout-activity.mjs`** — the only new function.
-  Gated the same way as `admin-stats.mjs` (`x-admin-key` against this
-  app's own `ADMIN_PASSWORD`), then calls the checkout site's
-  `/api/checkout-log` **server-to-server**, authenticated with two NEW
-  variables: `CHECKOUT_LOG_URL` and `CHECKOUT_LOG_KEY` (that site's own
-  `CHECKOUT_ADMIN_PASSWORD` — never this app's `ADMIN_PASSWORD` doing
-  double duty as another site's credential). See `SETUP.md` §5.
-- **A missed scan's photo is inlined as a `data:` URL** in this
-  function's response, fetched server-side from the checkout site's own
-  image endpoint. An `<img src>` on this page can't attach the custom
-  header that endpoint needs, and it's a different origin so no cookie
-  crosses either — fetching server-side and embedding sidesteps needing
-  a second cross-site image endpoint entirely. Capped at 25 photos per
-  response (`MAX_PHOTOS` in that file) so one unusually bad day can't
-  turn a dashboard load into dozens of fetches.
-- **The tab, its markup, and its JS all live in `tools/admin.py`**
-  (`pane-checkout`, the `.stat-grid`/`.stat-tile`/`.miss-row` CSS in
-  `ADMIN_CSS`, `loadCheckout()` in `ADMIN_JS`) — same file, same
-  generated-output rule as everything else here. `loadCheckout()` is
-  called from `boot()` alongside `loadStats()`/`loadInbox()`, and again
-  whenever the date picker changes.
-- **Leaving `CHECKOUT_LOG_URL`/`CHECKOUT_LOG_KEY` unset is a normal,
-  expected state**, not a bug to chase — the tab just reports it can't
-  reach the checkout site and everything else on this admin screen keeps
-  working. Don't make this a hard dependency of anything else here.

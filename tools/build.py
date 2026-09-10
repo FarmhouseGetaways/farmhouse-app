@@ -28,7 +28,6 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from admin import ADMIN_BODY, ADMIN_CSS, ADMIN_JS
 from install_page import INSTALL_BODY, INSTALL_CSS, INSTALL_JS
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -961,22 +960,6 @@ def page_install():
             + '<script src="/js/app.js?v=' + ASSET_HASH + '"></script>\n</body>\n</html>\n')
 
 
-def page_admin():
-    """
-    No tab bar. It is a tool, not a section of the app, and a tab pointing at a
-    password screen would be a permanent piece of furniture for visitors.
-    """
-    html = (head("Admin", "/admin", "var(--fstv)", ADMIN_CSS)
-            + bar("Admin", "Cory &amp; Carissa only")
-            + ADMIN_BODY
-            + "</main>\n" + ADMIN_JS
-            + '\n<script src="/js/app.js?v=' + ASSET_HASH + '"></script>\n</body>\n</html>\n')
-    # Belt and braces: the admin screen must never be indexed, even though the
-    # whole site already carries a noindex header.
-    return html.replace("<title>Admin</title>",
-                        '<title>Admin</title>\n<meta name="robots" content="noindex, nofollow">')
-
-
 def main():
     pages = {
         "index.html": page_today(),
@@ -985,7 +968,6 @@ def main():
         "watch.html": page_watch(),
         "more.html": page_more(),
         "install.html": page_install(),
-        "admin.html": page_admin(),
     }
     for name, html in pages.items():
         (ROOT / name).write_text(html)
