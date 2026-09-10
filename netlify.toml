@@ -79,8 +79,13 @@
 [functions."instagram-refresh"]
   schedule = "0 9 * * 1"
 
-# Admin lives entirely on FarmhouseGetaways/farmhouse-admin now
-# (farmhouse-admin.netlify.app) — including the guest broadcast. A short
-# second life as its own small Google-SSO corner here didn't last: two
-# separate admin surfaces was worse than the branding complaint that split
-# them apart in the first place. There is no /admin on this app any more.
+# The cross-site inbox, the Lodgify calendar, checkout activity and the
+# guest broadcast all live on FarmhouseGetaways/farmhouse-admin
+# (farmhouse-admin.netlify.app) now — not here, and not as a redirect to
+# there either (that was tried and reverted the same day). What's left here
+# is a small admin corner of this app's OWN: test push, subscriber count,
+# is-it-switched-on. Google-SSO gated, same three accounts. See CLAUDE.md.
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200

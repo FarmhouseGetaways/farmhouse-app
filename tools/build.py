@@ -29,6 +29,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from install_page import INSTALL_BODY, INSTALL_CSS, INSTALL_JS
+from admin import ADMIN_BODY, ADMIN_CSS, ADMIN_JS
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -167,7 +168,7 @@ def head(title, path, accent, extra_head=""):
 def bar(title, sub, action=""):
     return f"""<header class="bar">
   <div><p class="bar-title">{title}</p><p class="bar-sub">{sub}</p></div>
-  <div class="bar-right">{action}</div>
+  <div class="bar-right">{action}<a class="bar-admin" href="/admin">Admin</a></div>
 </header>
 <main id="main">
 """
@@ -960,6 +961,22 @@ def page_install():
             + '<script src="/js/app.js?v=' + ASSET_HASH + '"></script>\n</body>\n</html>\n')
 
 
+def page_admin():
+    """
+    No tab bar. This app's own small admin corner — app-level settings only
+    (test push, subscriber count, is-it-switched-on), everything about
+    running the business moved to farmhouse-admin (see CLAUDE.md). Google
+    sign-in, not a password.
+    """
+    html = (head("Admin", "/admin", "var(--fstv)", ADMIN_CSS)
+            + bar("Admin", "Cory &amp; Carissa only")
+            + ADMIN_BODY
+            + "</main>\n" + ADMIN_JS
+            + '\n<script src="/js/app.js?v=' + ASSET_HASH + '"></script>\n</body>\n</html>\n')
+    return html.replace("<title>Admin</title>",
+                        '<title>Admin</title>\n<meta name="robots" content="noindex, nofollow">')
+
+
 def main():
     pages = {
         "index.html": page_today(),
@@ -967,6 +984,7 @@ def main():
         "stay.html": page_stay(),
         "watch.html": page_watch(),
         "more.html": page_more(),
+        "admin.html": page_admin(),
         "install.html": page_install(),
     }
     for name, html in pages.items():

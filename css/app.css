@@ -103,7 +103,18 @@ button { font: inherit; }
   padding: .45rem .8rem; background: none; cursor: pointer;
 }
 
+/* The way in to this app's own small admin corner, on every page. Small
+   and quiet — it is not for guests and should not compete with anything —
+   but visible, because a hidden gesture is a thing you have to remember. */
 .bar-right { display: inline-flex; align-items: center; gap: .5rem; }
+.bar-admin {
+  font-size: .58rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; text-decoration: none;
+  color: var(--mute);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: .32rem .6rem; opacity: .75;
+}
+.bar-admin:hover, .bar-admin:focus-visible { opacity: 1; color: var(--accent); }
 
 /* ---------- the tab bar ---------- */
 .tabs {
@@ -244,6 +255,8 @@ p.lede { font-size: 1.04rem; line-height: 1.6; color: #CFC7BA; }
 .rows b { display: block; font-size: .97rem; font-weight: 700; }
 .rows span { display: block; font-size: .8rem; color: var(--mute-2); }
 .rows .go { margin-left: auto; color: var(--mute-2); }
+.rows .go.good { color: var(--fstv); }
+.rows .go.warn { color: var(--mbm-red); }
 
 /* ---------- the map ---------- */
 #fsmap {
