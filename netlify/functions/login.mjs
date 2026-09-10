@@ -60,6 +60,14 @@ export default async (req) => {
       if (url.searchParams.get("error")) {
         return redirectTo("/admin.html?error=" + encodeURIComponent("Google sign-in was cancelled."));
       }
+      // The browser sometimes fires this redirect twice for one sign-in (seen
+      // live, both requests carrying the same code). Google's auth code is
+      // single-use, so the second exchange always fails — but if the first
+      // one already landed and set a valid session, treat the duplicate as
+      // success instead of bouncing the user to an error page.
+      if (currentEmail(req)) {
+        return redirectTo("/admin.html");
+      }
       try {
         const idToken = await exchangeCode(url.searchParams.get("code"), redirectUri(url));
         const claims = await verifyIdToken(idToken);
