@@ -62,6 +62,31 @@ function partySize(item) {
   return null;
 }
 
+/**
+ * A clean "Direct" / "Airbnb" / "Vrbo" label, worth showing plainly given
+ * Cory and Carissa's active push to grow direct bookings over OTA ones (see
+ * the Book Direct plan). Lodgify's own `source`/`source_text` fields are
+ * inconsistent across older, migrated reservations — some hold a clean
+ * channel name ("HomeAwayNotManaged"), others hold a raw JSON blob of the
+ * Airbnb sync metadata (`listingId`/`threadId`) instead of a channel name at
+ * all. Both are handled; anything unrecognised falls back to the raw text
+ * rather than guessing.
+ */
+function channelFor(item) {
+  const raw = (item.source_text || item.source || "").trim();
+  if (!raw) return "Direct";
+  if (/homeaway|vrbo/i.test(raw)) return "Vrbo";
+  if (/airbnb/i.test(raw)) return "Airbnb";
+  if (raw.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.listingId || parsed.threadId) return "Airbnb";
+    } catch (err) { /* not JSON after all — fall through to the raw text */ }
+    return "Channel booking";
+  }
+  return raw;
+}
+
 function mapItem(item) {
   const prop = PROPERTIES[item.property_id];
   if (!prop) return null; // a third property or a mis-tagged booking — not ours to show
@@ -74,7 +99,7 @@ function mapItem(item) {
     partySize: partySize(item),
     guestName: guestName(item.guest),
     status: item.status,
-    source: item.source_text || item.source || "",
+    channel: channelFor(item),
   };
 }
 

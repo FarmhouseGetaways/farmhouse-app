@@ -221,6 +221,7 @@ ADMIN_CSS = """<style>
   .sub.bk-mr { background: rgba(61,224,74,.14); border-color: var(--fstv); }
   .sub-where.bk-rbr { background: var(--mbm-red); color: var(--night); }
   .sub-where.bk-mr { background: var(--fstv); color: var(--night); }
+  .cal-nights { color: var(--mute-2); font-size: .82em; }
   .adm-filters { display: flex; gap: .4rem; margin: 0 0 .8rem; flex-wrap: wrap; }
   .adm-filter {
     background: none; border: 1px solid var(--line); color: var(--mute-2);
@@ -481,20 +482,51 @@ ADMIN_JS = """<script>
     return d.toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" });
   }
 
+  /** Whole days between two YYYY-MM-DD dates, both read as local midnight —
+   *  this runs in the viewer's own browser, so "today" is whatever day it is
+   *  on their phone, not a server clock. */
+  function daysBetween(fromIso, toIso) {
+    var from = new Date(fromIso + "T00:00:00"), to = new Date(toIso + "T00:00:00");
+    return Math.round((to - from) / 86400000);
+  }
+
+  /** "Arrives in 3 days", "Currently staying — departs tomorrow", etc. —
+   *  the same language the push notifications use (bookings-notify.mjs), so
+   *  the calendar and the phone alert never describe the same moment two
+   *  different ways. */
+  function arrivalStatus(b) {
+    var today = new Date().toISOString().slice(0, 10);
+    var toArrival = daysBetween(today, b.checkin);
+    if (toArrival > 1) return "Arrives in " + toArrival + " days";
+    if (toArrival === 1) return "Arrives tomorrow";
+    if (toArrival === 0) return "Arrives today";
+    var toDeparture = daysBetween(today, b.checkout);
+    if (toDeparture === 0) return "Currently staying \\u2014 departs today";
+    if (toDeparture === 1) return "Currently staying \\u2014 departs tomorrow";
+    if (toDeparture > 1) return "Currently staying \\u2014 " + toDeparture + " days left";
+    return ""; // already checked out — the server-side filter keeps these off the list anyway
+  }
+
   function calCard(b) {
     // Colour is the fast read here — a wall of otherwise-identical dark
     // cards is hard to scan by property at a glance. bk-rbr/bk-mr are
     // calendar-only modifiers on the shared .sub/.sub-where classes, so
     // nothing here touches how those look on the Inbox tab.
     var propClass = b.property === "RBR" ? "bk-rbr" : (b.property === "MR" ? "bk-mr" : "");
+    var nights = daysBetween(b.checkin, b.checkout);
+    var status = arrivalStatus(b);
     var rows = '<dl>' +
       '<dt>Check-in</dt><dd>' + esc(fmtDate(b.checkin)) + '</dd>' +
-      '<dt>Check-out</dt><dd>' + esc(fmtDate(b.checkout)) + '</dd>' +
+      '<dt>Check-out</dt><dd>' + esc(fmtDate(b.checkout)) +
+        (nights > 0 ? ' <span class="cal-nights">(' + nights + ' night' + (nights === 1 ? '' : 's') + ')</span>' : '') +
+        '</dd>' +
       (b.guestName ? '<dt>Guest</dt><dd>' + esc(b.guestName) + '</dd>' : '') +
       (b.partySize != null ? '<dt>Party size</dt><dd>' + esc(b.partySize) + '</dd>' : '') +
+      (b.channel ? '<dt>Booked via</dt><dd>' + esc(b.channel) + '</dd>' : '') +
       '</dl>';
     return '<div class="sub' + (propClass ? " " + propClass : "") + '">' +
       '<div class="sub-top"><b>' + esc(b.propertyName) + '</b>' +
+      (status ? '<span class="sub-when">' + esc(status) + '</span>' : '') +
       '<span class="sub-where' + (propClass ? " " + propClass : "") + '">' + esc(b.property) + '</span></div>' +
       rows + '</div>';
   }
