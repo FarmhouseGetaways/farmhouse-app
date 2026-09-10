@@ -214,9 +214,11 @@ ADMIN_CSS = """<style>
   }
   .sub dl + dl { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--line); }
   .sub .btn { padding: .7rem 1.1rem; font-size: .64rem; }
-  /* Calendar cards only — RBR/MR at a glance without reading either badge. */
-  .sub.bk-rbr { border-left: 3px solid var(--mbm-red); }
-  .sub.bk-mr { border-left: 3px solid var(--fstv); }
+  /* Calendar cards only — RBR/MR at a glance without reading either badge.
+     A tint across the whole card, not just a stripe, is what actually reads
+     from a distance; the border keeps it crisp against the dark background. */
+  .sub.bk-rbr { background: rgba(245,131,106,.16); border-color: var(--mbm-red); }
+  .sub.bk-mr { background: rgba(61,224,74,.14); border-color: var(--fstv); }
   .sub-where.bk-rbr { background: var(--mbm-red); color: var(--night); }
   .sub-where.bk-mr { background: var(--fstv); color: var(--night); }
   .adm-filters { display: flex; gap: .4rem; margin: 0 0 .8rem; flex-wrap: wrap; }
