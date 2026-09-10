@@ -86,6 +86,15 @@ export default async () => {
 
   return Response.json(
     { stands, _approved: added, _overlayError: note },
-    { headers: { "Cache-Control": "public, max-age=60" } }
+    {
+      headers: {
+        "Cache-Control": "public, max-age=60",
+        // Public, already-scrubbed data — safe to read from the other
+        // Farmhouse Getaways sites too. farmhousegetaways.com's own
+        // farmstand map reads this directly so it never drifts from what
+        // the app itself shows (see that repo's ramona-farmstand-map.html).
+        "Access-Control-Allow-Origin": "*",
+      },
+    }
   );
 };
