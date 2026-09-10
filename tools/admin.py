@@ -490,12 +490,23 @@ ADMIN_JS = """<script>
     return Math.round((to - from) / 86400000);
   }
 
+  /** Today's own calendar date, in THIS device's own timezone. getFullYear/
+   *  getMonth/getDate read the local wall clock; toISOString() does not — it
+   *  converts to UTC first, which is already "tomorrow" every evening for
+   *  anyone west of Greenwich, and silently shifted every countdown below by
+   *  a day for exactly that reason until caught live on 9 Sep 2026. */
+  function localToday() {
+    var d = new Date();
+    var mm = String(d.getMonth() + 1).padStart(2, "0"), dd = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + mm + "-" + dd;
+  }
+
   /** "Arrives in 3 days", "Currently staying — departs tomorrow", etc. —
    *  the same language the push notifications use (bookings-notify.mjs), so
    *  the calendar and the phone alert never describe the same moment two
    *  different ways. */
   function arrivalStatus(b) {
-    var today = new Date().toISOString().slice(0, 10);
+    var today = localToday();
     var toArrival = daysBetween(today, b.checkin);
     if (toArrival > 1) return "Arrives in " + toArrival + " days";
     if (toArrival === 1) return "Arrives tomorrow";
