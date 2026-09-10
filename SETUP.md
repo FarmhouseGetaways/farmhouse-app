@@ -38,24 +38,15 @@ and every existing subscription dies, so people have to opt in again.
 
     ADMIN_PASSWORD  = something long that is not used anywhere else
 
-The whole business back office (inbox, calendar, checkout, guest push)
-lives on `FarmhouseGetaways/farmhouse-admin`, Google-SSO gated — not here.
-This value is purely a server-to-server credential: `admin-submissions.mjs`,
-`admin-approve.mjs` and `push-send.mjs` compare against it in constant time
-when farmhouse-admin calls them, holding the same value as its own
-`GUEST_APP_KEY`. This app's own `/admin.html` (app-level settings only —
-test push, subscriber count) is gated by Google sign-in, not this
-password; see section 3a below.
-
-## 3a. This app's own admin
-
-    GOOGLE_CLIENT_ID     = same client farmhouse-admin uses
-    GOOGLE_CLIENT_SECRET = same client's secret
-    ADMIN_SESSION_SECRET = something long, this app's own, not shared
-
-`/admin` here is small on purpose: subscriber count, a "This phone" test
-push (never real guests), and a read of which of these vars are set. See
-CLAUDE.md for why it isn't more than that.
+There is no admin screen on this app at all — `/admin` is a plain redirect
+to `FarmhouseGetaways/farmhouse-admin`, the one Google-SSO admin for the
+whole business, including things specifically about THIS app (subscriber
+count, a test push). This value is purely a server-to-server credential:
+`admin-submissions.mjs`, `admin-approve.mjs`, `push-send.mjs`,
+`admin-stats.mjs` and `push-test.mjs` all compare against it in constant
+time when farmhouse-admin calls them, holding the same value as its own
+`GUEST_APP_KEY`. Nothing on this app ever prompts a person for it — see
+CLAUDE.md for how many tries it took to land on that.
 
 ## 4. Instagram
 
@@ -85,12 +76,12 @@ Checkout tab just says so; nothing else here depends on it.
 
 ## 6. Check it
 
-Open `/admin` here, sign in with Google, and check "Is it switched on?" —
-that's the app-level version of this check. Then use **Send a test push**
-to confirm push actually reaches your own phone, without bothering any
-real guest. For the business back office (inbox, calendar, checkout) and
-the actual guest broadcast, sign in to farmhouse-admin.netlify.app instead
-— its own Status tab and Push tab cover those.
+Sign in to farmhouse-admin.netlify.app (Google, one of the three
+allow-listed accounts) and check its Status tab — "The guest app" section
+there reads this app's own env vars and subscriber count. Turn on
+notifications from this app's own Today screen on your phone like any
+guest would, then use farmhouse-admin's **Send a test push** to confirm it
+actually arrives, without bothering any real guest.
 
 ## What happens after that
 

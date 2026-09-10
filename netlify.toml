@@ -79,13 +79,14 @@
 [functions."instagram-refresh"]
   schedule = "0 9 * * 1"
 
-# The cross-site inbox, the Lodgify calendar, checkout activity and the
-# guest broadcast all live on FarmhouseGetaways/farmhouse-admin
-# (farmhouse-admin.netlify.app) now — not here, and not as a redirect to
-# there either (that was tried and reverted the same day). What's left here
-# is a small admin corner of this app's OWN: test push, subscriber count,
-# is-it-switched-on. Google-SSO gated, same three accounts. See CLAUDE.md.
+# One admin, one login, one URL. Everything about admin — the cross-site
+# inbox, the Lodgify calendar, checkout activity, the guest broadcast, AND
+# this app's own subscriber count / test push / is-it-switched-on — lives
+# on FarmhouseGetaways/farmhouse-admin. This is a plain external redirect,
+# not a page of its own: no second Google sign-in anywhere on this app. See
+# CLAUDE.md before ever building a local /admin page here again.
 [[redirects]]
   from = "/admin"
-  to = "/admin.html"
-  status = 200
+  to = "https://farmhouse-admin.netlify.app/"
+  status = 302
+  force = true

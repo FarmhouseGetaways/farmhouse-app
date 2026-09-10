@@ -105,6 +105,29 @@ export async function sendToAdmins(payload) {
   return result;
 }
 
+/**
+ * The single most recently subscribed device — for a test push, with no
+ * separate "make this phone an admin" flow to build. Turn on notifications
+ * from the app's own Today screen like any guest would, right before
+ * pressing the test button on farmhouse-admin, and this is you.
+ */
+export async function sendToNewest(payload) {
+  if (!configured()) return { sent: 0, gone: 0, failed: 0, reason: "VAPID keys are not set" };
+
+  const store = SUBS();
+  const { blobs } = await store.list();
+  let newestEndpoint = null, newestAt = "";
+  for (const b of blobs) {
+    let sub;
+    try { sub = await store.get(b.key, { type: "json" }); } catch { continue; }
+    if (sub && sub.added > newestAt) { newestAt = sub.added; newestEndpoint = sub.endpoint; }
+  }
+  if (!newestEndpoint) {
+    return { sent: 0, gone: 0, failed: 0, reason: "no phones are subscribed — turn on notifications from the Today screen first" };
+  }
+  return send(payload, (sub) => sub.endpoint === newestEndpoint);
+}
+
 /** Constant-time-ish compare, so the admin password cannot be guessed a
  *  character at a time by timing the response. */
 export function secretOk(given) {

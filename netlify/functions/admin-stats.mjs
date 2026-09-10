@@ -1,16 +1,17 @@
 /**
  * GET /.netlify/functions/admin-stats
  *
- * For this app's own small admin corner: the real guest subscriber count,
- * plus a plain "is it switched on?" read of the env vars this app depends
- * on. Gated by the session cookie.
+ * The real guest subscriber count, plus a plain "is it switched on?" read
+ * of the env vars this app depends on. Called server-to-server by
+ * farmhouse-admin (the only admin surface — this app has no admin UI of
+ * its own), holding the same `x-admin-key` credential as
+ * admin-submissions.mjs and admin-approve.mjs.
  */
 import { SUBS, configured as pushConfigured } from "./_lib/push.mjs";
-import { currentEmail, json } from "./_lib/session.mjs";
-import { configured as googleConfigured } from "./_lib/google.mjs";
+import { secretOk, json } from "./_lib/admin.mjs";
 
 export default async (req) => {
-  if (!currentEmail(req)) return json({ ok: false }, 401);
+  if (!secretOk(req.headers.get("x-admin-key"))) return json({ ok: false }, 401);
 
   let subscribers = 0;
   try {
@@ -23,8 +24,6 @@ export default async (req) => {
     subscribers,
     configured: {
       vapid: pushConfigured(),
-      google: googleConfigured(),
-      sessionSecret: Boolean((process.env.ADMIN_SESSION_SECRET || "").trim()),
       adminPassword: Boolean((process.env.ADMIN_PASSWORD || "").trim()),
       instagram: Boolean((process.env.IG_TOKEN || "").trim()),
     },
