@@ -38,10 +38,13 @@ and every existing subscription dies, so people have to opt in again.
 
     ADMIN_PASSWORD  = something long that is not used anywhere else
 
-Every admin function compares against this in constant time. The browser keeps
-it in sessionStorage, so it is gone when the tab closes. It is a shared
-password: it cannot tell Cory from Carissa, and anyone reading over a shoulder
-has it. Fine for two people; not fine if this ever holds customer data.
+There is no admin screen on this app any more — the whole back office
+(inbox, calendar, checkout, push) lives on `FarmhouseGetaways/farmhouse-admin`,
+Google-SSO gated. This value is now purely a server-to-server credential:
+`admin-submissions.mjs`, `admin-approve.mjs` and `push-send.mjs` compare
+against it in constant time when farmhouse-admin calls them, holding the
+same value as its own `GUEST_APP_KEY`. Nothing on this app ever prompts a
+person for it.
 
 ## 4. Instagram
 
@@ -71,9 +74,10 @@ Checkout tab just says so; nothing else here depends on it.
 
 ## 6. Check it
 
-Open `/admin`, sign in. The "Is it switched on?" list turns green as each piece
-lands. Then install the app on your own phone, turn notifications on, and use
-**Send one now** to check it arrives.
+Sign in to farmhouse-admin.netlify.app (Google, one of the three allow-listed
+accounts) and check its Status tab — that's where "is it switched on?" lives
+now. Then install this app on your own phone, turn notifications on, and use
+farmhouse-admin's **Send one now** to check it arrives.
 
 ## What happens after that
 

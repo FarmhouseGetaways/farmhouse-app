@@ -71,47 +71,60 @@ Sources: `tools/build.py`, `tools/admin.py`, `tools/install_page.py`.
 Netlify functions under `netlify/functions/` are NOT generated — edit those
 directly.
 
-## Most of the admin screen moved out — a small corner stayed, 9-10 Sep 2026
+## All admin lives on farmhouse-admin now — this app has NO /admin, 9-10 Sep 2026 (settled)
 
-The cross-site inbox, the Lodgify calendar, checkout activity, and the
-owner-alert receiver (`push-alert.mjs`) are now a **separate app**:
-`FarmhouseGetaways/farmhouse-admin`, live at farmhouse-admin.netlify.app,
-Google-SSO gated for Cory & Carissa only. This site grew that screen
-organically until it was the actual back-office for the whole business
-while still being installed by guests as "Mini Barn" — see that repo's own
-CLAUDE.md for the full reasoning.
+The cross-site inbox, the Lodgify calendar, checkout activity, the
+owner-alert receiver (`push-alert.mjs`), and the guest-broadcast button all
+live on a **separate app**: `FarmhouseGetaways/farmhouse-admin`, live at
+farmhouse-admin.netlify.app, Google-SSO gated for Cory & Carissa only. This
+site grew an `/admin` screen organically until it was the actual
+back-office for the whole business while still being installed by guests
+as "Mini Barn" — see farmhouse-admin's own CLAUDE.md for the full history.
 
-**`/admin` here is still a real page, on purpose — not a redirect.** The
-first cut of this split made it one, but Cory's reaction on seeing the MBM
-guest broadcast sitting inside the *other* app (titled "Farmhouse Getaways,
-Cory & Carissa only") was immediate: *"MBM app needs admin too, just not
-the same stuff. Put it there."* So `admin.html` is back, much smaller than
-before — one card, "Send one now" to every guest who installed this app —
-generated from `tools/admin.py` same as everything else, Google-SSO gated
-the same way as farmhouse-admin (same three accounts, same Authorization
-Code redirect flow — see farmhouse-admin's CLAUDE.md for why it's a plain
-redirect and not Google's rendered button, which doesn't work in Safari).
+**This took three tries to land, in one day:**
+1. First cut made `/admin` a redirect to farmhouse-admin, guest broadcast
+   included over there. Cory's reaction on seeing an MBM-branded broadcast
+   button inside an app titled "Farmhouse Getaways, Cory & Carissa only":
+   *"Under push what the hell is this? mini barn market??"* → *"MBM app
+   needs admin too, just not the same stuff. Put it there."*
+2. So `/admin` became its own small real page here — `admin.html`, one
+   card, "Send one now," Google-SSO gated the same three accounts, own
+   session cookie, own login flow. Built and shipped.
+3. Cory's reaction to THAT, on actually seeing it live: *"what the hell is
+   this and why do i need this on a landing page... Combine those
+   [mother]f\*\*\*ers. no /admin."* Two separate admin surfaces was worse
+   than the branding complaint that split them apart in the first place.
+   **`/admin` is gone from this app, permanently, along with the whole
+   auth stack that came with it** (`login.mjs`, `_lib/session.mjs`,
+   `_lib/admin-emails.mjs`, `_lib/google.mjs`, `admin-stats.mjs`,
+   `tools/admin.py`, the `/admin` redirect in `netlify.toml`, and the
+   "Admin" link that used to sit in the top-right of every guest page's
+   header). **Do not rebuild a second admin surface here again** — if
+   Cory asks for guest-broadcast controls, they belong on farmhouse-admin's
+   Push tab, calling this app's `push-send.mjs` server-to-server, same
+   pattern as the next section.
 
-**Why it isn't a clean 1:1 split — Netlify Blobs are scoped per site.**
-`bookings.mjs`/`_lib/lodgify.mjs` and `checkout-activity.mjs` (both stateless
-— Lodgify and a checkout-site proxy respectively) moved to farmhouse-admin
-outright. But `admin-submissions.mjs` and `admin-approve.mjs` **stayed here,
-unchanged** — they read and write the `stands-overlay` and
-`submissions-handled` Blobs, which is also what this site's own public
-`stands.mjs` reads. Moving them would have meant approving a farm stand in
-the other app silently wrote to a store the public map never looks at.
-farmhouse-admin's own versions of those two are thin proxies that call
-these, server-to-server, holding `GUEST_APP_KEY` — the same value as this
-site's own `ADMIN_PASSWORD`. **`ADMIN_PASSWORD` stays set here for exactly
-that reason**, even though nothing in this app's own UI reads it anymore:
-`secretOk()`/`x-admin-key` on those two functions never changed.
+**Why it isn't a clean 1:1 split otherwise — Netlify Blobs are scoped per
+site.** `bookings.mjs`/`_lib/lodgify.mjs` and `checkout-activity.mjs` (both
+stateless — Lodgify and a checkout-site proxy respectively) moved to
+farmhouse-admin outright. But `admin-submissions.mjs` and
+`admin-approve.mjs` **stayed here, unchanged** — they read and write the
+`stands-overlay` and `submissions-handled` Blobs, which is also what this
+site's own public `stands.mjs` reads. Moving them would have meant
+approving a farm stand in the other app silently wrote to a store the
+public map never looks at. farmhouse-admin's own versions of those two are
+thin proxies that call these, server-to-server, holding `GUEST_APP_KEY` —
+the same value as this site's own `ADMIN_PASSWORD`. **`ADMIN_PASSWORD`
+stays set here for exactly that reason**, even though nothing in this
+app's own UI reads it anymore: `secretOk()`/`x-admin-key` on those
+functions never changed.
 
-`push-send.mjs` (the guest broadcast) is called **same-origin now**, from
-this app's own `admin.html`, gated by this app's own session cookie
-(`_lib/session.mjs`, `currentEmail(req)`) — not the old `ADMIN_PASSWORD`
-header. An earlier pass had this called cross-site from farmhouse-admin
-instead; that's gone along with the redirect, now that the broadcast has
-its own home here again.
+`push-send.mjs` (the guest broadcast) is back to being a **server-to-server
+endpoint only**, gated by `secretOk()`/`x-admin-key` exactly like the two
+functions above — same `GUEST_APP_KEY`/`ADMIN_PASSWORD` pair. It briefly
+had its own session-cookie gate during step 2 above; that's gone along with
+the rest of that auth stack. The only caller now is farmhouse-admin's Push
+tab.
 
 **Two small pieces of dead code, left in place on purpose rather than
 risk breaking the shared `_lib/push.mjs` file for a cleanup with no
@@ -123,10 +136,11 @@ next time either file is touched for something else.
 
 ## Push
 
-`sendToAll` — every installed phone. Stories, peaches, guest news, and now
-the "Send one now" broadcast on this app's own `admin.html` too. There is no
-owner-only audience on this side any more — that's entirely farmhouse-admin's
-own, separate subscriber pool now (see that repo's CLAUDE.md).
+`sendToAll` — every installed phone. Stories, peaches, guest news, and the
+"Send one now" broadcast (called from farmhouse-admin now, not from any
+screen on this app — see above). There is no owner-only audience on this
+side any more — that's entirely farmhouse-admin's own, separate subscriber
+pool now (see that repo's CLAUDE.md).
 
 Story pushes carry a shared tag so the service worker replaces rather than
 stacks them; the broadcast uses its own tag (`"manual"`) so two sends never
