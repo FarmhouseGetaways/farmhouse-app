@@ -59,9 +59,22 @@ export default async () => {
     const store = STANDS();
     const { blobs } = await store.list();
     const index = new Map(stands.map((s, i) => [(s.name || "").trim().toLowerCase(), i]));
+
+    // "Newest wins" below is only true if we merge in age order, and
+    // store.list() returns blobs in no order we control — so two approvals of
+    // the same stand used to resolve to whichever the listing happened to
+    // hand back last. Every approved record carries approvedAt, so sort by it
+    // and the outcome stops depending on luck. The admin screen tells Cory an
+    // approval REPLACES a same-named stand; this is what makes that true.
+    const records = [];
     for (const b of blobs) {
       const s = await store.get(b.key, { type: "json" });
       if (!s || !s.name) continue;
+      records.push(s);
+    }
+    records.sort((a, b) => String(a.approvedAt || "").localeCompare(String(b.approvedAt || "")));
+
+    for (const s of records) {
       const key = s.name.trim().toLowerCase();
       if (index.has(key)) {
         // An approved stand already in the committed file is an edit, not a
