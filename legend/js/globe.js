@@ -208,9 +208,34 @@ window.LEGEND = window.LEGEND || {};
                         a[1] + (b[1] - a[1]) * (lo + hi) / 2);
   };
 
+  /* Every coastline ring, flattened out of the MultiPolygon once. Longitudes
+     are unwrapped as we go: a ring that crosses the 180° line would otherwise
+     jump 360° between two neighbouring points, and edge() interpolating across
+     that jump puts the horizon crossing on the wrong side of the planet. The
+     projection only takes sin/cos of longitude, so 190° and −170° draw at the
+     same spot. */
+  Globe.prototype.landRings = function () {
+    if (this._rings) return this._rings;
+    var polys = L.WORLD_GEO ? L.WORLD_GEO.geometry.coordinates : [], out = [];
+    for (var i = 0; i < polys.length; i++) {
+      for (var j = 0; j < polys[i].length; j++) {
+        var ring = polys[i][j], off = 0, r = [];
+        for (var k = 0; k < ring.length; k++) {
+          if (k) {
+            var d = (ring[k][0] + off) - (ring[k - 1][0] + off);
+            if (d > 180) off -= 360; else if (d < -180) off += 360;
+          }
+          r.push([ring[k][0] + off, ring[k][1]]);
+        }
+        out.push(r);
+      }
+    }
+    this._rings = out;
+    return out;
+  };
+
   Globe.prototype.drawLand = function () {
     var ctx = this.ctx;
-    var polys = L.WORLD_GEO ? L.WORLD_GEO.geometry.coordinates : [];
 
     var self = this;
 
@@ -229,38 +254,44 @@ window.LEGEND = window.LEGEND || {};
     function angleOf(p) { return Math.atan2(p.y - self.cy, p.x - self.cx); }
 
     ctx.beginPath();
-    for (var i = 0; i < polys.length; i++) {
-      var rings = polys[i];
-      for (var j = 0; j < rings.length; j++) {
-        var ring = rings[j];
-        var open = false, prev = null, enteredAt = null;
-        for (var k = 0; k < ring.length; k++) {
-          var pt = this.project(ring[k][0], ring[k][1]);
-          if (pt.v) {
-            if (!open) {
-              /* Coming over the horizon: start at the rim so the shape
-                 doesn't appear to leap out of the middle of the ocean. */
-              if (prev) {
-                var e = this.edge(prev, ring[k]);
-                ctx.moveTo(e.x, e.y);
-                ctx.lineTo(pt.x, pt.y);
-                enteredAt = angleOf(e);
-              } else {
-                ctx.moveTo(pt.x, pt.y);
-                enteredAt = null;
-              }
-              open = true;
-            } else ctx.lineTo(pt.x, pt.y);
-          } else if (open) {
-            var e2 = this.edge(ring[k - 1], ring[k]);
-            ctx.lineTo(e2.x, e2.y);
-            if (enteredAt !== null) closeAlongRim(angleOf(e2), enteredAt);
-            else ctx.closePath();
-            open = false;
-          }
-          prev = ring[k];
+    var rings = this.landRings();
+    for (var j = 0; j < rings.length; j++) {
+      var ring = rings[j], n = ring.length, vis = [], hidden = -1, anyVisible = false;
+      for (var k = 0; k < n; k++) {
+        vis.push(this.project(ring[k][0], ring[k][1]));
+        if (!vis[k].v && hidden < 0) hidden = k;
+        if (vis[k].v) anyVisible = true;
+      }
+      if (!anyVisible) continue;
+      if (hidden < 0) {   /* all on the near side */
+        for (k = 0; k < n; k++) { if (k) ctx.lineTo(vis[k].x, vis[k].y); else ctx.moveTo(vis[k].x, vis[k].y); }
+        ctx.closePath();
+        continue;
+      }
+      /* Walk the ring starting from a point round the back of the planet, so
+         every visible stretch comes over the horizon, leaves over it, and
+         closes along the rim. Starting part way through a visible stretch
+         (the old loop began at the ring's first point wherever that fell)
+         split one landmass into two overlapping pieces, and the even-odd
+         fill cancelled the overlap out: most of Russia and Ukraine went
+         missing whenever Europe faced front. */
+      var open = false, enteredAt = 0;
+      for (var s = 1; s <= n; s++) {
+        var cur = (hidden + s) % n, before = (hidden + s - 1) % n, pt = vis[cur];
+        if (pt.v && !open) {
+          var e = this.edge(ring[before], ring[cur]);
+          ctx.moveTo(e.x, e.y);
+          ctx.lineTo(pt.x, pt.y);
+          enteredAt = angleOf(e);
+          open = true;
+        } else if (pt.v) {
+          ctx.lineTo(pt.x, pt.y);
+        } else if (open) {
+          var e2 = this.edge(ring[before], ring[cur]);
+          ctx.lineTo(e2.x, e2.y);
+          closeAlongRim(angleOf(e2), enteredAt);
+          open = false;
         }
-        if (open) ctx.closePath();
       }
     }
     ctx.fillStyle = this.C.land;
