@@ -14,7 +14,10 @@
 import { getStore } from "@netlify/blobs";
 
 export const STANDS   = () => getStore("stands-overlay");
-export const HANDLED  = () => getStore("submissions-handled");
+// Strong consistency: the inbox re-reads this list the instant a card is
+// dismissed, and with the default (eventual) reads it came back WITHOUT the
+// key just written, so the card reappeared.
+export const HANDLED  = () => getStore({ name: "submissions-handled", consistency: "strong" });
 
 /** The Netlify sites whose forms feed this inbox. */
 export const SITES = ["farmstandtv", "minibarnmarket", "farmhousegetaways", "farmhousegetawaysapp"];
