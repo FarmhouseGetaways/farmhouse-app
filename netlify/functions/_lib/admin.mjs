@@ -84,6 +84,51 @@ export async function allSubmissions() {
  * record in the first place — not to be filtered out later by something that
  * might get refactored.
  */
+/**
+ * A stand's three links: website, Instagram, Facebook. Owners type all sorts
+ * into these boxes, so each value is sorted to where it actually belongs:
+ *
+ *   "@alpineacres" in Website      -> Instagram  (2 Oct 2026: an @ handle
+ *                                     became https://@alpineacres... and the
+ *                                     map's Website button went nowhere)
+ *   "https://@alpineacres"         -> Instagram  (records saved before this fix)
+ *   instagram.com/... anywhere     -> Instagram, as https://www.instagram.com/<handle>/
+ *   facebook.com / fb.com anywhere -> Facebook
+ *   one word with no dot (Website) -> treated as an Instagram handle
+ *   anything else                  -> Website, with https:// added
+ *
+ * A handle in the Instagram or Facebook box becomes that site's full address.
+ */
+export function standLinks(raw = {}) {
+  const out = { url: "", instagram: "", facebook: "" };
+  const tidy = (v) => String(v || "").trim().replace(/\s+/g, "");
+  const igUrl = (h) => {
+    h = h.replace(/^@/, "").replace(/[/?#].*$/, "");
+    return /^[A-Za-z0-9._]{1,30}$/.test(h) ? `https://www.instagram.com/${h}/` : "";
+  };
+  const route = (v, hint) => {
+    v = tidy(v);
+    if (!v) return;
+    const bare = v.replace(/^https?:\/\//i, "").replace(/^www\./i, "");
+    const m = /^instagram\.com\/([^/?#]+)/i.exec(bare) || /^instagr\.am\/([^/?#]+)/i.exec(bare);
+    if (m) { out.instagram = out.instagram || igUrl(m[1]); return; }
+    if (/^(facebook\.com|fb\.com|fb\.me|m\.facebook\.com)\//i.test(bare)) { out.facebook = out.facebook || "https://" + bare.replace(/^m\./i, "www.").replace(/^(?!www\.)facebook/i, "www.facebook"); return; }
+    if (bare.startsWith("@")) { out.instagram = out.instagram || igUrl(bare); return; }
+    if (hint === "instagram") { out.instagram = out.instagram || igUrl(bare); return; }
+    if (hint === "facebook") {
+      out.facebook = out.facebook || (/^[A-Za-z0-9.]+$/.test(bare) && !/\.(com|net|org)$/i.test(bare)
+        ? `https://www.facebook.com/${bare}` : "https://" + bare);
+      return;
+    }
+    if (!bare.includes(".")) { out.instagram = out.instagram || igUrl(bare); return; }
+    out.url = out.url || (/^https?:\/\//i.test(v) ? v : "https://" + v);
+  };
+  route(raw.instagram, "instagram");
+  route(raw.facebook, "facebook");
+  route(raw.url, "website");
+  return out;
+}
+
 export function toStand(data, extra = {}) {
   const pick = (...keys) => {
     for (const k of keys) {
@@ -104,10 +149,10 @@ export function toStand(data, extra = {}) {
     address,
     hours: pick("hours"),
     sells: pick("sells"),
-    url: pick("url", "website"),
     tags: ["produce"],
   };
-  if (stand.url && !/^https?:\/\//.test(stand.url)) stand.url = "https://" + stand.url;
+  const links = standLinks({ url: pick("url", "website"), instagram: pick("instagram"), facebook: pick("facebook") });
+  for (const k of ["url", "instagram", "facebook"]) if (links[k]) stand[k] = links[k];
   if (extra.lat != null && extra.lng != null) {
     stand.lat = Number(extra.lat);
     stand.lng = Number(extra.lng);

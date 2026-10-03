@@ -17,7 +17,7 @@
  * get wrong, no runtime failure mode at all.
  */
 import standsData from "../../data/stands.json";
-import { STANDS } from "./_lib/admin.mjs";
+import { STANDS, standLinks } from "./_lib/admin.mjs";
 
 /**
  * The whitelist. Anything not named here never leaves the server.
@@ -30,11 +30,17 @@ import { STANDS } from "./_lib/admin.mjs";
  * toStand() never produces either field, so an approved submission still
  * cannot carry contact details no matter what is on this list.
  */
-const PUBLIC_FIELDS = ["name", "address", "lat", "lng", "hours", "sells", "phone", "url", "tags", "ours"];
+const PUBLIC_FIELDS = ["name", "address", "lat", "lng", "hours", "sells", "phone", "url", "instagram", "facebook", "tags", "ours"];
 
+// Links are re-sorted on the way out too (see standLinks), so records saved
+// before 2 Oct 2026 with an @handle stuck in the website field show up as
+// Instagram instead of a dead Website button.
 function scrub(s) {
   const out = {};
   for (const k of PUBLIC_FIELDS) if (s[k] != null && s[k] !== "") out[k] = s[k];
+  const links = standLinks({ url: s.url, instagram: s.instagram, facebook: s.facebook });
+  delete out.url; delete out.instagram; delete out.facebook;
+  for (const k of ["url", "instagram", "facebook"]) if (links[k]) out[k] = links[k];
   return out;
 }
 
