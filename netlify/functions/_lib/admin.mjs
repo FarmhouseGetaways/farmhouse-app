@@ -78,11 +78,15 @@ export async function allSubmissions() {
 /**
  * Turn a farmstand form submission into a stand record.
  *
- * The owner's name, email and phone are deliberately dropped. The submit form
+ * The owner's name and email are deliberately dropped. The submit form
  * promises owners in writing that their name is not listed, and the only way
  * to keep that promise is for the contact details never to enter the public
  * record in the first place — not to be filtered out later by something that
  * might get refactored.
+ *
+ * The phone is kept: the form labels it LISTED and the map's Call link uses
+ * it. Until 7 Oct 2026 it was dropped along with the email, so no approved
+ * stand ever showed the number its owner was told would be listed.
  */
 /**
  * A stand's three links: website, Instagram, Facebook. Owners type all sorts
@@ -149,6 +153,7 @@ export function toStand(data, extra = {}) {
     address,
     hours: pick("hours"),
     sells: pick("sells"),
+    phone: pick("phone"),
     tags: ["produce"],
   };
   const links = standLinks({ url: pick("url", "website"), instagram: pick("instagram"), facebook: pick("facebook") });

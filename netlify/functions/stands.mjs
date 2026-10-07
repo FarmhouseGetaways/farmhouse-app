@@ -29,14 +29,15 @@ import { STANDS, standLinks } from "./_lib/admin.mjs";
  * has ever rendered an email address — it was riding along in the payload for
  * free, which is the worst kind of exposure: all of the risk, none of the use.
  *
- * toStand() never produces either field, so an approved submission still
- * cannot carry contact details no matter what is on this list.
+ * toStand() produces the stand's phone (the form lists it) and never the
+ * email, so an approved submission cannot carry an email address no matter
+ * what is on this list.
  */
 const PUBLIC_FIELDS = ["name", "address", "lat", "lng", "hours", "sells", "phone", "url", "instagram", "facebook", "tags", "ours"];
 
 // What the submit form asks the owner for. A replacement overwrites exactly
 // these and keeps the rest of the old record.
-const OWNER_FIELDS = ["name", "address", "hours", "sells", "url", "instagram", "facebook"];
+const OWNER_FIELDS = ["name", "address", "hours", "sells", "phone", "url", "instagram", "facebook"];
 
 // Links are re-sorted on the way out too (see standLinks), so records saved
 // before 2 Oct 2026 with an @handle stuck in the website field show up as
@@ -93,7 +94,7 @@ export default async () => {
         // A replacement (farmhouse-admin's Replace button). The owner sent the
         // whole listing, so everything they type is overwritten, blanks
         // included: a link they removed comes off the map. What the form never
-        // asks for (pin, categories, phone, "ours") carries over, and so does
+        // asks for (pin, categories, "ours") carries over, and so does
         // the address when they left the street empty. Works under a new name
         // too: the old name stops pointing anywhere.
         const i = index.get(target);
