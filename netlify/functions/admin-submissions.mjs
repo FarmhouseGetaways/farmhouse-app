@@ -15,15 +15,38 @@ import { allSubmissions, HANDLED, STANDS, secretOk, json, toStand } from "./_lib
  * first so the newest approval of a name wins. Admin-only: this endpoint
  * needs the admin key, and the public stands endpoint never sends `owner`.
  */
-async function owners() {
+async function owners(subs, repaired) {
   const out = {};
+  // Each overlay record is saved under the id of the submission it was
+  // approved from, so the original is always one lookup away.
+  const byId = new Map(subs.map((s) => [String(s.id), s]));
   try {
     const store = STANDS();
     const { blobs } = await store.list();
     const recs = [];
     for (const b of blobs) {
       const s = await store.get(b.key, { type: "json" });
-      if (s && s.name && s.owner) recs.push(s);
+      if (!s || !s.name) continue;
+
+      // Repair for stands approved before 7 Oct 2026: toStand dropped the
+      // phone the form promised to list, and approvals did not keep the
+      // owner's contact. Both come from the stand's own original submission.
+      // Only ever fills a gap, so it runs once per record and then no-ops.
+      const sub = byId.get(String(b.key));
+      if (sub && sub.form === "farmstand") {
+        const d = sub.data || {};
+        const phone = String(d.phone || "").trim();
+        const email = String(d.email || "").trim().toLowerCase();
+        let changed = false;
+        if (!s.phone && phone) { s.phone = phone; changed = true; }
+        if (!s.owner && (email || phone)) { s.owner = { email, phone }; changed = true; }
+        if (changed) {
+          await store.setJSON(b.key, s);
+          repaired.push(s.name);
+        }
+      }
+
+      if (s.owner) recs.push(s);
     }
     recs.sort((a, b) => String(a.approvedAt || "").localeCompare(String(b.approvedAt || "")));
     for (const s of recs) {
@@ -51,9 +74,13 @@ export default async (req) => {
     for (const b of blobs) handled[b.key] = true;
   } catch (err) { /* no store yet — nothing has been handled */ }
 
+  const repaired = [];
+  const onFile = await owners(subs, repaired);
+
   return json({
     ok: true,
-    owners: await owners(),
+    owners: onFile,
+    repaired,
     submissions: subs.map((s) => ({
       ...s,
       handled: Boolean(handled[s.id]),
