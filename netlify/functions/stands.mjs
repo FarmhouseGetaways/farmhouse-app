@@ -5,7 +5,9 @@
  * the admin screen, merged. Public — this is what every visitor's map reads.
  *
  * ⚠ PRIVACY. This endpoint is public. Approved records are built by toStand(),
- * which never copies the owner's name, email or phone. The submit form
+ * which never copies the owner's name, email or phone. admin-approve does add
+ * a private `owner` {email, phone} to the stored record (the contact on file
+ * for update checks); scrub() below is what keeps it off this endpoint. The submit form
  * promises owners their name is not listed, and this is the boundary where
  * that promise is either kept or broken. Do not add contact fields here.
  *
@@ -31,6 +33,10 @@ import { STANDS, standLinks } from "./_lib/admin.mjs";
  * cannot carry contact details no matter what is on this list.
  */
 const PUBLIC_FIELDS = ["name", "address", "lat", "lng", "hours", "sells", "phone", "url", "instagram", "facebook", "tags", "ours"];
+
+// What the submit form asks the owner for. A replacement overwrites exactly
+// these and keeps the rest of the old record.
+const OWNER_FIELDS = ["name", "address", "hours", "sells", "url", "instagram", "facebook"];
 
 // Links are re-sorted on the way out too (see standLinks), so records saved
 // before 2 Oct 2026 with an @handle stuck in the website field show up as
@@ -82,7 +88,22 @@ export default async () => {
 
     for (const s of records) {
       const key = s.name.trim().toLowerCase();
-      if (index.has(key)) {
+      const target = s.replaces ? String(s.replaces).trim().toLowerCase() : "";
+      if (target && index.has(target)) {
+        // A replacement (farmhouse-admin's Replace button). The owner sent the
+        // whole listing, so everything they type is overwritten, blanks
+        // included: a link they removed comes off the map. What the form never
+        // asks for (pin, categories, phone, "ours") carries over, and so does
+        // the address when they left the street empty. Works under a new name
+        // too: the old name stops pointing anywhere.
+        const i = index.get(target);
+        const kept = { ...stands[i] };
+        for (const f of OWNER_FIELDS) delete kept[f];
+        if (!s.address && stands[i].address) kept.address = stands[i].address;
+        stands[i] = { ...kept, ...scrub(s) };
+        index.delete(target);
+        index.set(key, i);
+      } else if (index.has(key)) {
         // An approved stand already in the committed file is an edit, not a
         // duplicate. Newest wins.
         const i = index.get(key);
